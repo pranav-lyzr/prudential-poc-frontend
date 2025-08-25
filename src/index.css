@@ -1,0 +1,30 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background-color: #f8fafc;
+}
+
+/* HTML content styling */
+.prose {
+  line-height: 1.6;
+}
+
+.prose p {
+  margin-bottom: 1rem;
+}
+
+.prose div {
+  margin-bottom: 0.5rem;
+}
+
+.prose br {
+  margin-bottom: 0.5rem;
+}
