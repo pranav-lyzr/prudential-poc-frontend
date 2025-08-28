@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Mail, Activity, Wifi, WifiOff } from 'lucide-react';
+import { Activity, Wifi, WifiOff } from 'lucide-react';
 import { apiService } from '../services/api';
 
 const Header: React.FC = () => {

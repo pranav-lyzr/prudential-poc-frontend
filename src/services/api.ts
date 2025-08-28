@@ -107,14 +107,13 @@ class ApiService {
       timestamp: apiEmail.received_date || apiEmail.extracted_at,
       attachments: apiEmail.attachments || [],
       is_read: apiEmail.is_read || false,
-      // Remove action tracking as requested
-      action: undefined
+      // Action is optional in the type, so we can omit it
     };
   }
 
   // Mock data for development (will be removed when real API is ready)
   private getMockEmails(): EmailData[] {
-    const mockEmails = [
+    const mockEmails: EmailData[] = [
       {
         id: '1',
         subject: 'Quarterly Financial Report Q4 2024',

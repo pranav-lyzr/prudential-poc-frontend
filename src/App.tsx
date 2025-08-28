@@ -1,4 +1,4 @@
-import React from 'react';
+
 import Header from './components/Header';
 import EmailList from './components/EmailList';
 import EmailDetail from './components/EmailDetail';
