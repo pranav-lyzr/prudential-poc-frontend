@@ -1,135 +1,121 @@
-# Prudential Email Dashboard Frontend
+# Prudential POC Frontend
 
-A modern React TypeScript application for managing and viewing email processing status and actions.
+A React-based frontend application for managing and analyzing emails with AI-powered insights.
 
 ## Features
 
-- **Email List View**: Display all emails with key information (subject, sender, timestamp, attachments, action status)
-- **Email Detail View**: Show complete email content, attachments, and action details
-- **Responsive Design**: Works on both desktop and mobile devices
-- **Clean UI**: Simple gray and black color scheme with no gradients
-- **Action Tracking**: Visual indicators for different email processing actions
+- **Email Management**: View, search, and manage emails
+- **AI-Powered Analysis**: Integration with Lyzr AI for intelligent email classification and routing
+- **Real-time Updates**: Auto-refresh functionality for email data
+- **Responsive Design**: Modern UI built with Tailwind CSS
 
-## Tech Stack
+## New: Lyzr AI Integration
 
-- **React 18** with TypeScript
-- **Tailwind CSS** for styling
-- **Vite** for build tooling
-- **Lucide React** for icons
+The application now integrates with the Lyzr AI API to provide intelligent email analysis:
+
+### API Endpoint
+```
+GET /api/v1/webhook/emails/{email_id}/lyzr-data
+```
+
+### Features
+- **Automatic Classification**: Emails are automatically classified (e.g., CLAIMS, FINANCIAL, TECHNICAL)
+- **Confidence Scoring**: AI confidence level for each classification
+- **Priority Assessment**: Automatic priority level assignment
+- **Routing Recommendations**: Suggested routing actions for each email
+- **Entity Extraction**: Key information extraction (customer names, issue types, etc.)
+- **Salesforce Integration**: Suggested Salesforce actions and auto-acknowledgment templates
+
+### Data Structure
+The Lyzr API returns structured data including:
+- Classification and confidence scores
+- Key indicators and routing actions
+- Priority levels and review requirements
+- Extracted entities and technical details
 
 ## Getting Started
 
 ### Prerequisites
-
 - Node.js 16+ 
 - pnpm (recommended) or npm
 
 ### Installation
-
-1. Install dependencies:
 ```bash
+# Clone the repository
+git clone <repository-url>
+cd prudential-poc-frontend
+
+# Install dependencies
 pnpm install
-```
 
-2. Start the development server:
-```bash
+# Start development server
 pnpm dev
 ```
 
-3. Open your browser and navigate to `http://localhost:3000`
-
-### Build for Production
-
-```bash
-pnpm build
+### Environment Variables
+The application connects to the Prudential POC backend at:
 ```
-
-## Project Structure
-
+https://prudential-poc-backend.ca.lyzr.app
 ```
-src/
-├── components/          # React components
-│   ├── EmailList.tsx   # Email list display
-│   ├── EmailDetail.tsx # Email detail view
-│   └── Header.tsx      # Application header
-├── types/              # TypeScript type definitions
-│   └── email.ts        # Email data types
-├── App.tsx             # Main application component
-├── main.tsx            # Application entry point
-└── index.css           # Global styles with Tailwind
-```
-
-## API Integration
-
-The application is fully integrated with the Prudential POC backend at [https://prudential-poc-backend.ca.lyzr.app/](https://prudential-poc-backend.ca.lyzr.app/). The system automatically connects to the backend and displays real-time connection status.
-
-### Backend Endpoints
-
-- `GET /api/v1/webhook/emails/all` - List all emails (✅ **ACTIVE** - Real API endpoint)
-- `GET /api/v1/email/{id}` - Get specific email details
-- `POST /api/v1/email` - Create new email record
-- `GET /health` - Health check endpoint for backend status
-
-### Real-time Status Monitoring
-
-The dashboard includes real-time backend connection monitoring:
-- **Webhook connection status** displayed in header
-- **Prudential logo** in header branding
-- Automatic health checks every 30 seconds
-- Visual status indicators (Connected/Disconnected/Checking)
-- **Real email data from Microsoft Graph API** via backend webhook
-- **Auto-refresh every 5 seconds** for latest emails (silent updates)
-- **Manual refresh button** with loading indicator
-- **Emails sorted by latest first** for better user experience
-- Fallback to mock data when backend is unavailable
-
-## Email Actions
-
-The system supports the following email actions:
-
-- **Processed**: Email has been processed and archived
-- **Archived**: Email stored for long-term retention
-- **Forwarded**: Email forwarded to another department/team
-- **Replied**: Response sent to the sender
-- **Pending**: Awaiting action or approval
-
-## Customization
-
-### Colors
-The application uses a simple gray and black color scheme as requested. Colors can be customized in the Tailwind configuration.
-
-### Layout
-The dashboard uses a modern three-panel layout:
-- **Left Sidebar**: Email list with compact email previews and refresh button
-- **Center Panel**: Full email content with HTML rendering and individual scrolling
-- **Right Panel**: Available actions and action history for selected email
-- **Individual scrolling** for each section with proper height calculations
-- **End-to-end header** with Prudential branding and webhook connection status
-- **Clean interface** without irrelevant status indicators
 
 ## Development
 
-### Adding New Features
-1. Create new components in the `components/` directory
-2. Add new types in the `types/` directory
-3. Update the main App component as needed
+### Project Structure
+```
+src/
+├── components/          # React components
+│   ├── EmailActions.tsx # Email actions and Lyzr data display
+│   ├── EmailDetail.tsx  # Email detail view
+│   ├── EmailList.tsx    # Email list component
+│   └── ...
+├── hooks/               # Custom React hooks
+│   └── useEmails.ts     # Email management logic
+├── services/            # API services
+│   └── api.ts          # API client with Lyzr integration
+├── types/               # TypeScript type definitions
+│   └── email.ts        # Email and Lyzr data types
+└── ...
+```
 
-### Styling
-All styling is done through Tailwind CSS classes. The design follows a clean, professional aesthetic suitable for business applications.
+### Key Components
 
-## Future Enhancements
+#### EmailActions.tsx
+Displays AI analysis results from Lyzr, including:
+- Classification results with confidence scores
+- Priority levels and routing recommendations
+- Extracted entities and key indicators
+- Salesforce action suggestions
 
-- Real-time email updates via WebSocket
-- Email filtering and search functionality
-- Bulk email operations
-- User authentication and role-based access
-- **Email action API integration** (actions panel ready for real API)
-- Email action history tracking
-- Export functionality for reports
+#### useEmails.ts
+Manages email state and automatically fetches Lyzr data when emails are selected.
+
+#### api.ts
+Handles API communication including the new Lyzr data endpoint.
+
+## API Integration
+
+### Lyzr Data Fetching
+When an email is selected, the application automatically fetches Lyzr analysis data:
+
+```typescript
+// Fetch Lyzr data for a specific email
+const lyzrData = await apiService.getLyzrData(emailId);
+```
+
+### Error Handling
+The application gracefully handles API failures and displays appropriate loading/error states.
+
+## Styling
+Built with Tailwind CSS for consistent, responsive design.
+
+## Building for Production
+```bash
+pnpm build
+pnpm preview
+```
 
 ## Contributing
-
-1. Follow the existing code style and structure
-2. Use TypeScript for all new code
-3. Ensure responsive design works on all screen sizes
-4. Test thoroughly before submitting changes
+1. Follow the existing code style
+2. Add TypeScript types for new features
+3. Test API integrations thoroughly
+4. Update documentation as needed

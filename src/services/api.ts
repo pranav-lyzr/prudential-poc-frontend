@@ -1,4 +1,4 @@
-import { EmailData } from '../types/email';
+import { EmailData, LyzrApiResponse } from '../types/email';
 
 const API_BASE_URL = 'https://prudential-poc-backend.ca.lyzr.app';
 
@@ -15,13 +15,23 @@ class ApiService {
     };
 
     try {
+      console.log('API request: Making request to:', url);
+      console.log('API request: Config:', config);
+      
       const response = await fetch(url, config);
+      console.log('API request: Response status:', response.status);
+      console.log('API request: Response headers:', response.headers);
       
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+        const errorText = await response.text();
+        console.error('API request: Error response body:', errorText);
+        throw new Error(`HTTP error! status: ${response.status}, body: ${errorText}`);
       }
       
-      return await response.json();
+      const responseData = await response.json();
+      console.log('API request: Response data:', responseData);
+      
+      return responseData;
     } catch (error) {
       console.error('API request failed:', error);
       throw error;
@@ -37,7 +47,12 @@ class ApiService {
       console.log('API response received:', response);
       
       // Transform the API response to match our EmailData interface
-      const transformedEmails = response.emails.map(email => this.transformApiEmail(email));
+      const transformedEmails = response.emails.map(email => {
+        console.log('Transforming email:', email);
+        const transformed = this.transformApiEmail(email);
+        console.log('Transformed email:', transformed);
+        return transformed;
+      });
       
       // Sort emails by timestamp in descending order (latest first)
       const sortedEmails = transformedEmails.sort((a, b) => {
@@ -46,11 +61,38 @@ class ApiService {
         return dateB - dateA; // Descending order (latest first)
       });
       
+      console.log('Final transformed emails:', sortedEmails);
       return sortedEmails;
     } catch (error) {
       console.error('Failed to fetch emails from API, falling back to mock data:', error);
       // Fallback to mock data if API fails
       return this.getMockEmails();
+    }
+  }
+
+  // Get Lyzr data for email
+  async getLyzrData(emailId: string): Promise<LyzrApiResponse> {
+    try {
+      console.log(`Fetching Lyzr data for email ID: ${emailId}`);
+      console.log(`Email ID type: ${typeof emailId}, length: ${emailId.length}`);
+      
+      // For Lyzr API, we need to use the message_id, not the _id
+      // The emailId parameter should be the message_id from the email
+      const encodedEmailId = encodeURIComponent(emailId);
+      const url = `/api/v1/webhook/emails/${encodedEmailId}/lyzr-data`;
+      
+      console.log(`Lyzr API URL: ${url}`);
+      console.log(`Full Lyzr API URL: ${API_BASE_URL}${url}`);
+      console.log(`Original emailId: ${emailId}`);
+      console.log(`Encoded emailId: ${encodedEmailId}`);
+      
+      const response = await this.request<LyzrApiResponse>(url);
+      console.log('Lyzr API response received:', response);
+      
+      return response;
+    } catch (error) {
+      console.error(`Failed to fetch Lyzr data for email ${emailId}:`, error);
+      throw error;
     }
   }
 
@@ -96,10 +138,36 @@ class ApiService {
     }
   }
 
+  // Test Lyzr API endpoint
+  async testLyzrEndpoint(): Promise<LyzrApiResponse> {
+    try {
+      console.log('Testing Lyzr API endpoint...');
+      
+      // Use the example message ID from the user's curl command
+      const testMessageId = 'AAMkAGFlYjU0ZDcyLTQwN2MtNDY2OC05MDlkLWI1MTYwZDI4Mzk0MQBGAAAAAAAbbYndWHI-TZ_6NpZEpYvyBwCifDyVNCg4RZszsE4CITOpAAAAAAEMAACifDyVNCg4RZszsE4CITOpAAAEoaqSAAA%3D';
+      
+      console.log('Test message ID:', testMessageId);
+      console.log('Test message ID length:', testMessageId.length);
+      
+      const response = await this.getLyzrData(testMessageId);
+      console.log('Test Lyzr API response:', response);
+      
+      return response;
+    } catch (error) {
+      console.error('Test Lyzr API failed:', error);
+      throw error;
+    }
+  }
+
   // Transform API email format to our EmailData interface
   private transformApiEmail(apiEmail: any): EmailData {
-    return {
-      id: apiEmail._id || apiEmail.message_id,
+    console.log('transformApiEmail: Raw API email:', apiEmail);
+    console.log('transformApiEmail: _id:', apiEmail._id);
+    console.log('transformApiEmail: message_id:', apiEmail.message_id);
+    
+    const transformed = {
+      id: apiEmail._id || apiEmail.message_id, // Use _id as primary, fallback to message_id
+      messageId: apiEmail.message_id, // Store message_id separately for Lyzr API calls
       subject: apiEmail.subject || 'No Subject',
       sender: apiEmail.from?.emailAddress?.address || 'Unknown Sender',
       recipients: apiEmail.to?.map((recipient: any) => recipient.emailAddress?.address || 'Unknown Recipient') || [],
@@ -109,6 +177,9 @@ class ApiService {
       is_read: apiEmail.is_read || false,
       // Action is optional in the type, so we can omit it
     };
+    
+    console.log('transformApiEmail: Transformed email:', transformed);
+    return transformed;
   }
 
   // Mock data for development (will be removed when real API is ready)
@@ -116,6 +187,7 @@ class ApiService {
     const mockEmails: EmailData[] = [
       {
         id: '1',
+        messageId: 'AAMkAGFlYjU0ZDcyLTQwN2MtNDY2OC05MDlkLWI1MTYwZDI4Mzk0MQBGAAAAAAAbbYndWHI-TZ_6NpZEpYvyBwCifDyVNCg4RZszsE4CITOpAAAAAAEMAACifDyVNCg4RZszsE4CITOpAAAEoaqSAAA%3D',
         subject: 'Quarterly Financial Report Q4 2024',
         sender: 'finance@prudential.com',
         recipients: ['management@prudential.com', 'board@prudential.com'],
@@ -141,10 +213,37 @@ class ApiService {
           description: 'Email processed and archived in financial records',
           timestamp: '2024-12-15T11:15:00Z',
           user: 'system@prudential.com'
+        },
+        lyzrData: {
+          _id: '68b01c61cec0e676dbbedbe8',
+          email_id: 'AAMkAGFlYjU0ZDcyLTQwN2MtNDY2OC05MDlkLWI1MTYwZDI4Mzk0MQBGAAAAAAAbbYndWHI-TZ_6NpZEpYvyBwCifDyVNCg4RZszsE4CITOpAAAAAAEMAACifDyVNCg4RZszsE4CITOpAAAEoaqSAAA%3D',
+          session_id: '68afeef999e8c20dd8f25774-54d39dcd023b',
+          raw_response: '{"response":"```json\\n{\\n  \\\"classification\\\": \\\"FINANCIAL\\\",\\n  \\\"confidence_score\\\": 0.95,\\n  \\\"routing_action\\\": \\\"finance_team\\\",\\n  \\\"key_indicators\\\": [\\\"quarterly report\\\", \\\"financial analysis\\\", \\\"Q4 2024\\\"],\\n  \\\"salesforce_action\\\": \\\"ARCHIVE_DOCUMENT\\\",\\n  \\\"existing_case_number\\\": null,\\n  \\\"priority_level\\\": \\\"MEDIUM\\\",\\n  \\\"auto_acknowledgment\\\": \\\"template_financial_received\\\",\\n  \\\"requires_human_review\\\": false,\\n  \\\"extracted_entities\\\": {\\n    \\\"report_type\\\": \\\"Quarterly Financial Report\\\",\\n    \\\"period\\\": \\\"Q4 2024\\\",\\n    \\\"department\\\": \\\"Finance\\\",\\n    \\\"action_required\\\": \\\"Review and feedback\\\"\\n  }\\n}\\n```"}',
+          extracted_json: {
+            classification: 'FINANCIAL',
+            confidence_score: 0.95,
+            routing_action: 'finance_team',
+            key_indicators: ['quarterly report', 'financial analysis', 'Q4 2024'],
+            salesforce_action: 'ARCHIVE_DOCUMENT',
+            existing_case_number: null,
+            priority_level: 'MEDIUM',
+            auto_acknowledgment: 'template_financial_received',
+            requires_human_review: false,
+            extracted_entities: {
+              report_type: 'Quarterly Financial Report',
+              period: 'Q4 2024',
+              department: 'Finance',
+              action_required: 'Review and feedback'
+            }
+          },
+          processed_at: '2024-12-15T10:35:00Z',
+          success: true,
+          error: null
         }
       },
       {
         id: '2',
+        messageId: 'AAMkAGFlYjU0ZDcyLTQwN2MtNDY2OC05MDlkLWI1MTYwZDI4Mzk0MQBGAAAAAAAbbYndWHI-TZ_6NpZEpYvyBwCifDyVNCg4RZszsE4CITOpAAAAAAEMAACifDyVNCg4RZszsE4CITOpAAAEoaqSAAA%3D',
         subject: 'Customer Service Inquiry - Policy #12345',
         sender: 'customer@example.com',
         recipients: ['support@prudential.com'],
@@ -160,6 +259,7 @@ class ApiService {
       },
       {
         id: '3',
+        messageId: 'AAMkAGFlYjU0ZDcyLTQwN2MtNDY2OC05MDlkLWI1MTYwZDI4Mzk0MQBGAAAAAAAbbYndWHI-TZ_6NpZEpYvyBwCifDyVNCg4RZszsE4CITOpAAAAAAEMAACifDyVNCg4RZszsE4CITOpAAAEoaqSAAA%3D',
         subject: 'New Business Partnership Proposal',
         sender: 'partnerships@techcorp.com',
         recipients: ['business@prudential.com', 'strategy@prudential.com'],

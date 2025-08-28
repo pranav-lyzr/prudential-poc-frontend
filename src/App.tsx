@@ -6,7 +6,7 @@ import EmailActions from './components/EmailActions';
 import { useEmails } from './hooks/useEmails';
 
 function App() {
-  const { emails, selectedEmail, loading, error, selectEmail, refreshEmails } = useEmails();
+  const { emails, selectedEmail, loading, error, selectEmail, refreshEmails, fetchLyzrData } = useEmails();
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -34,7 +34,7 @@ function App() {
           
           {/* Actions Section */}
           <div className="w-80 bg-gray-50 flex-shrink-0 overflow-hidden">
-            <EmailActions email={selectedEmail} />
+            <EmailActions email={selectedEmail} onFetchLyzrData={fetchLyzrData} />
           </div>
         </div>
       </main>

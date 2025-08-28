@@ -10,6 +10,7 @@ interface UseEmailsReturn {
   selectEmail: (email: EmailData) => void;
   refreshEmails: () => Promise<void>;
   createEmail: (emailData: Omit<EmailData, 'id'>) => Promise<void>;
+  fetchLyzrData: (emailId: string) => Promise<void>;
 }
 
 export const useEmails = (): UseEmailsReturn => {
@@ -40,9 +41,63 @@ export const useEmails = (): UseEmailsReturn => {
     }
   }, [isInitialLoad]);
 
-  const selectEmail = useCallback((email: EmailData) => {
-    setSelectedEmail(email);
+  const fetchLyzrData = useCallback(async (emailId: string) => {
+    try {
+      console.log('useEmails: fetchLyzrData called with emailId:', emailId);
+      console.log('useEmails: emailId type:', typeof emailId, 'length:', emailId.length);
+      
+      const lyzrResponse = await apiService.getLyzrData(emailId);
+      console.log('useEmails: Lyzr response received:', lyzrResponse);
+      
+      // Update the selected email with Lyzr data
+      setSelectedEmail(prev => {
+        if (prev) {
+          console.log('useEmails: Updating selected email with Lyzr data');
+          return {
+            ...prev,
+            lyzrData: lyzrResponse.lyzr_data
+          };
+        }
+        return prev;
+      });
+      
+      // Also update the email in the emails list
+      setEmails(prev => prev.map(email => 
+        (email.messageId === emailId || email.id === emailId)
+          ? { ...email, lyzrData: lyzrResponse.lyzr_data }
+          : email
+      ));
+      
+      console.log('useEmails: Lyzr data updated successfully');
+    } catch (err) {
+      console.error('useEmails: Failed to fetch Lyzr data:', err);
+      throw err;
+    }
   }, []);
+
+  const selectEmail = useCallback(async (email: EmailData) => {
+    console.log('selectEmail called with:', email);
+    console.log('selectEmail: email.messageId:', email.messageId);
+    console.log('selectEmail: email.id:', email.id);
+    setSelectedEmail(email);
+    
+    // Fetch Lyzr data for the selected email
+    try {
+      // Use messageId if available, otherwise fall back to id
+      const emailIdForLyzr = email.messageId || email.id;
+      console.log(`Selected email - ID: ${email.id}, MessageID: ${email.messageId}, Using for Lyzr: ${emailIdForLyzr}`);
+      
+      if (email.messageId) {
+        console.log('Calling fetchLyzrData with messageId:', email.messageId);
+        await fetchLyzrData(email.messageId);
+      } else {
+        console.log('No messageId found, skipping Lyzr data fetch');
+      }
+    } catch (err) {
+      console.error('Failed to fetch Lyzr data:', err);
+      // Don't show error to user, just log it
+    }
+  }, [fetchLyzrData]);
 
   const refreshEmails = useCallback(async () => {
     await fetchEmails(true); // Manual refresh shows loading
@@ -81,5 +136,6 @@ export const useEmails = (): UseEmailsReturn => {
     selectEmail,
     refreshEmails,
     createEmail,
+    fetchLyzrData,
   };
 };
