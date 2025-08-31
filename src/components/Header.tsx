@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Activity, Wifi, WifiOff } from 'lucide-react';
 import { apiService } from '../services/api';
+import SalesforceAuth from './SalesforceAuth';
 
 const Header: React.FC = () => {
   const [backendStatus, setBackendStatus] = useState<'connected' | 'disconnected' | 'checking'>('checking');
@@ -66,6 +67,10 @@ const Header: React.FC = () => {
         </div>
         
         <div className="flex items-center space-x-4">
+          {/* Salesforce Authentication */}
+          <SalesforceAuth />
+          
+          {/* Backend Status */}
           <div className={`flex items-center space-x-2 px-3 py-2 rounded-lg ${
             backendStatus === 'connected' ? 'bg-green-100' : 
             backendStatus === 'disconnected' ? 'bg-red-100' : 'bg-yellow-100'

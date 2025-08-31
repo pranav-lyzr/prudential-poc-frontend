@@ -124,47 +124,298 @@ const EmailActions: React.FC<EmailActionsProps> = ({ email, onFetchLyzrData }) =
       return typeof value === 'object' && value !== null ? value : defaultValue;
     };
 
+    // Check if we have the new API structure
+    const hasNewStructure = extracted_json.email_analysis || extracted_json.salesforce_action || extracted_json.customer_response || extracted_json.internal_routing;
+
     return (
       <div className="space-y-4">
-        {/* AI Classification */}
-        <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-lg p-4">
-          <div className="flex items-center space-x-3 mb-3">
-            <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
-              <Brain className="h-5 w-5 text-blue-600" />
+        {/* New API Structure - Email Analysis */}
+        {hasNewStructure && extracted_json.email_analysis && (
+          <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-lg p-4">
+            <div className="flex items-center space-x-3 mb-3">
+              <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
+                <Brain className="h-5 w-5 text-blue-600" />
+              </div>
+              <div>
+                <h3 className="text-sm font-semibold text-blue-900">Email Analysis</h3>
+                <p className="text-xs text-blue-700">AI Classification & Priority</p>
+              </div>
             </div>
-            <div>
-              <h3 className="text-sm font-semibold text-blue-900">AI Classification</h3>
-              <p className="text-xs text-blue-700">Lyzr AI Analysis Results</p>
+            
+            <div className="grid grid-cols-2 gap-3 text-sm mb-3">
+              <div className="bg-white rounded-lg p-3 border border-blue-100">
+                <p className="text-xs font-medium text-blue-600 mb-1">Classification</p>
+                <p className="font-semibold text-blue-900">{extracted_json.email_analysis.classification}</p>
+              </div>
+              <div className="bg-white rounded-lg p-3 border border-blue-100">
+                <p className="text-xs font-medium text-blue-600 mb-1">Confidence</p>
+                <p className="font-semibold text-blue-900">
+                  {(extracted_json.email_analysis.confidence_score * 100).toFixed(0)}%
+                </p>
+              </div>
+              <div className="bg-white rounded-lg p-3 border border-blue-100">
+                <p className="text-xs font-medium text-blue-600 mb-1">Priority Level</p>
+                <p className="font-semibold text-blue-900">{extracted_json.email_analysis.priority_level}</p>
+              </div>
+              <div className="bg-white rounded-lg p-3 border border-blue-100">
+                <p className="text-xs font-medium text-blue-600 mb-1">Key Indicators</p>
+                <p className="font-semibold text-blue-900">{extracted_json.email_analysis.key_indicators.length}</p>
+              </div>
             </div>
-          </div>
-          
-          <div className="grid grid-cols-2 gap-3 text-sm">
-            <div className="bg-white rounded-lg p-3 border border-blue-100">
-              <p className="text-xs font-medium text-blue-600 mb-1">Classification</p>
-              <p className="font-semibold text-blue-900">{getValue(extracted_json, 'classification', 'Unknown')}</p>
-            </div>
-            <div className="bg-white rounded-lg p-3 border border-blue-100">
-              <p className="text-xs font-medium text-blue-600 mb-1">Confidence</p>
-              <p className="font-semibold text-blue-900">
-                {getValue(extracted_json, 'confidence_score', 0) > 0 
-                  ? `${(getValue(extracted_json, 'confidence_score', 0) * 100).toFixed(0)}%`
-                  : 'N/A'
-                }
-              </p>
-            </div>
-            <div className="bg-white rounded-lg p-3 border border-blue-100">
-              <p className="text-xs font-medium text-blue-600 mb-1">Priority</p>
-              <p className="font-semibold text-blue-900">{getValue(extracted_json, 'priority_level', 'Unknown')}</p>
-            </div>
-            <div className="bg-white rounded-lg p-3 border border-blue-100">
-              <p className="text-xs font-medium text-blue-600 mb-1">Action Required</p>
-              <p className="font-semibold text-blue-900">{getValue(extracted_json, 'routing_action', 'Unknown')}</p>
-            </div>
-          </div>
-        </div>
 
-        {/* Key Indicators */}
-        {(() => {
+            {/* Key Indicators */}
+            {extracted_json.email_analysis.key_indicators.length > 0 && (
+              <div className="mb-3">
+                <p className="text-xs font-medium text-blue-600 mb-2">Key Indicators:</p>
+                <div className="flex flex-wrap gap-2">
+                  {extracted_json.email_analysis.key_indicators.map((indicator, index) => (
+                    <span
+                      key={index}
+                      className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full"
+                    >
+                      {indicator}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Urgency Factors */}
+            {extracted_json.email_analysis.urgency_factors && extracted_json.email_analysis.urgency_factors.length > 0 && (
+              <div className="mb-3">
+                <p className="text-xs font-medium text-blue-600 mb-2">Urgency Factors:</p>
+                <div className="flex flex-wrap gap-2">
+                  {extracted_json.email_analysis.urgency_factors.map((factor, index) => (
+                    <span
+                      key={index}
+                      className="px-2 py-1 bg-orange-100 text-orange-800 text-xs rounded-full"
+                    >
+                      {factor}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Extracted Entities */}
+            {extracted_json.email_analysis.extracted_entities && (
+              <div>
+                <p className="text-xs font-medium text-blue-600 mb-2">Extracted Information:</p>
+                <div className="grid grid-cols-2 gap-2 text-xs">
+                  {Object.entries(extracted_json.email_analysis.extracted_entities).map(([key, value]) => {
+                    if (!value || value === null) return null;
+                    
+                    const displayKey = key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+                    
+                    if (Array.isArray(value)) {
+                      return (
+                        <div key={key} className="bg-white rounded p-2 border border-blue-100">
+                          <p className="font-medium text-blue-700 mb-1">{displayKey}:</p>
+                          <div className="flex flex-wrap gap-1">
+                            {value.map((item, index) => (
+                              <span
+                                key={index}
+                                className="px-1 py-0.5 bg-blue-50 text-blue-700 text-xs rounded"
+                              >
+                                {item}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      );
+                    }
+                    
+                    return (
+                      <div key={key} className="bg-white rounded p-2 border border-blue-100">
+                        <p className="font-medium text-blue-700">{displayKey}:</p>
+                        <p className="text-blue-600">{String(value)}</p>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* New API Structure - Salesforce Action */}
+        {hasNewStructure && extracted_json.salesforce_action && typeof extracted_json.salesforce_action === 'object' && (() => {
+          const salesforceAction = extracted_json.salesforce_action as any;
+          return (
+            <div className="bg-gradient-to-r from-purple-50 to-pink-50 border border-purple-200 rounded-lg p-4">
+              <div className="flex items-center space-x-3 mb-3">
+                <div className="w-8 h-8 bg-purple-100 rounded-lg flex items-center justify-center">
+                  <Zap className="h-5 w-5 text-purple-600" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-semibold text-purple-900">Salesforce Action</h3>
+                  <p className="text-xs text-purple-700">Case Management Details</p>
+                </div>
+              </div>
+              
+              <div className="grid grid-cols-2 gap-3 text-sm mb-3">
+                <div className="bg-white rounded-lg p-3 border border-purple-100">
+                  <p className="text-xs font-medium text-purple-600 mb-1">Action Type</p>
+                  <p className="font-semibold text-purple-900">{salesforceAction.action_type}</p>
+                </div>
+                <div className="bg-white rounded-lg p-3 border border-purple-100">
+                  <p className="text-xs font-medium text-purple-600 mb-1">Case Status</p>
+                  <p className="font-semibold text-purple-900">{salesforceAction.case_status}</p>
+                </div>
+                <div className="bg-white rounded-lg p-3 border border-purple-100">
+                  <p className="text-xs font-medium text-purple-600 mb-1">Case Number</p>
+                  <p className="font-semibold text-purple-900">{salesforceAction.case_number}</p>
+                </div>
+                <div className="bg-white rounded-lg p-3 border border-purple-100">
+                  <p className="text-xs font-medium text-purple-600 mb-1">Routing Team</p>
+                  <p className="font-semibold text-purple-900">{salesforceAction.routing_team}</p>
+                </div>
+              </div>
+
+              <div className="bg-white rounded-lg p-3 border border-purple-100">
+                <p className="text-xs font-medium text-purple-600 mb-1">Case ID</p>
+                <p className="font-mono text-xs text-purple-900">{salesforceAction.case_id}</p>
+              </div>
+
+              <div className="flex space-x-2 mt-3">
+                <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+                  salesforceAction.comment_added 
+                    ? 'bg-green-100 text-green-800' 
+                    : 'bg-gray-100 text-gray-800'
+                }`}>
+                  {salesforceAction.comment_added ? 'Comment Added' : 'No Comment'}
+                </span>
+                {salesforceAction.comment_id && (
+                  <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                    Comment ID: {salesforceAction.comment_id}
+                  </span>
+                )}
+              </div>
+            </div>
+          );
+        })()}
+
+        {/* New API Structure - Customer Response */}
+        {hasNewStructure && extracted_json.customer_response && (
+          <div className="bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-lg p-4">
+            <div className="flex items-center space-x-3 mb-3">
+              <div className="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center">
+                <MessageSquare className="h-5 w-5 text-green-600" />
+              </div>
+              <div>
+                <h3 className="text-sm font-semibold text-green-900">Customer Response</h3>
+                <p className="text-xs text-green-700">Auto-Response & Next Steps</p>
+              </div>
+            </div>
+            
+            <div className="space-y-3">
+              <div className="bg-white rounded-lg p-3 border border-green-100">
+                <p className="text-xs font-medium text-green-600 mb-1">Auto-Acknowledgment Template</p>
+                <p className="font-semibold text-green-900">{extracted_json.customer_response.auto_acknowledgment}</p>
+              </div>
+              
+              <div className="bg-white rounded-lg p-3 border border-green-100">
+                <p className="text-xs font-medium text-green-600 mb-1">Estimated Response Time</p>
+                <p className="font-semibold text-green-900">{extracted_json.customer_response.estimated_response_time}</p>
+              </div>
+              
+              <div className="bg-white rounded-lg p-3 border border-green-100">
+                <p className="text-xs font-medium text-green-600 mb-1">Case Reference</p>
+                <p className="font-semibold text-green-900">{extracted_json.customer_response.case_reference}</p>
+              </div>
+              
+              <div className="bg-white rounded-lg p-3 border border-green-100">
+                <p className="text-xs font-medium text-green-600 mb-1">Next Steps</p>
+                <p className="text-sm text-green-900 leading-relaxed">{extracted_json.customer_response.next_steps}</p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* New API Structure - Internal Routing */}
+        {hasNewStructure && extracted_json.internal_routing && (
+          <div className="bg-gradient-to-r from-orange-50 to-amber-50 border border-orange-200 rounded-lg p-4">
+            <div className="flex items-center space-x-3 mb-3">
+              <div className="w-8 h-8 bg-orange-100 rounded-lg flex items-center justify-center">
+                <Shield className="h-5 w-5 text-orange-600" />
+              </div>
+              <div>
+                <h3 className="text-sm font-semibold text-orange-900">Internal Routing</h3>
+                <p className="text-xs text-orange-700">Team Assignment & Review Status</p>
+              </div>
+            </div>
+            
+            <div className="grid grid-cols-2 gap-3 text-sm mb-3">
+              <div className="bg-white rounded-lg p-3 border border-orange-100">
+                <p className="text-xs font-medium text-orange-600 mb-1">Specialist Team</p>
+                <p className="font-semibold text-orange-900">{extracted_json.internal_routing.specialist_team}</p>
+              </div>
+              <div className="bg-white rounded-lg p-3 border border-orange-100">
+                <p className="text-xs font-medium text-orange-600 mb-1">Follow-up Date</p>
+                <p className="font-semibold text-orange-900">{extracted_json.internal_routing.follow_up_date}</p>
+              </div>
+            </div>
+
+            <div className="flex space-x-2">
+              <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+                extracted_json.internal_routing.requires_human_review 
+                  ? 'bg-red-100 text-red-800' 
+                  : 'bg-green-100 text-green-800'
+              }`}>
+                {extracted_json.internal_routing.requires_human_review ? 'Human Review Required' : 'No Human Review Needed'}
+              </span>
+              <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+                extracted_json.internal_routing.escalation_needed 
+                  ? 'bg-red-100 text-red-800' 
+                  : 'bg-green-100 text-green-800'
+              }`}>
+                {extracted_json.internal_routing.escalation_needed ? 'Escalation Needed' : 'No Escalation'}
+              </span>
+            </div>
+          </div>
+        )}
+
+        {/* Legacy Structure - AI Classification (fallback) */}
+        {!hasNewStructure && (
+          <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-lg p-4">
+            <div className="flex items-center space-x-3 mb-3">
+              <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
+                <Brain className="h-5 w-5 text-blue-600" />
+              </div>
+              <div>
+                <h3 className="text-sm font-semibold text-blue-900">AI Classification</h3>
+                <p className="text-xs text-blue-700">Lyzr AI Analysis Results</p>
+              </div>
+            </div>
+            
+            <div className="grid grid-cols-2 gap-3 text-sm">
+              <div className="bg-white rounded-lg p-3 border border-blue-100">
+                <p className="text-xs font-medium text-blue-600 mb-1">Classification</p>
+                <p className="font-semibold text-blue-900">{getValue(extracted_json, 'classification', 'Unknown')}</p>
+              </div>
+              <div className="bg-white rounded-lg p-3 border border-blue-100">
+                <p className="text-xs font-medium text-blue-600 mb-1">Confidence</p>
+                <p className="font-semibold text-blue-900">
+                  {getValue(extracted_json, 'confidence_score', 0) > 0 
+                    ? `${(getValue(extracted_json, 'confidence_score', 0) * 100).toFixed(0)}%`
+                    : 'N/A'
+                  }
+                </p>
+              </div>
+              <div className="bg-white rounded-lg p-3 border border-blue-100">
+                <p className="text-xs font-medium text-blue-600 mb-1">Priority</p>
+                <p className="font-semibold text-blue-900">{getValue(extracted_json, 'priority_level', 'Unknown')}</p>
+              </div>
+              <div className="bg-white rounded-lg p-3 border border-blue-100">
+                <p className="text-xs font-medium text-blue-600 mb-1">Action Required</p>
+                <p className="font-semibold text-blue-900">{getValue(extracted_json, 'routing_action', 'Unknown')}</p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Legacy Structure - Key Indicators (fallback) */}
+        {!hasNewStructure && (() => {
           const keyIndicators = getArrayValue(extracted_json, 'key_indicators');
           if (keyIndicators.length > 0) {
             return (
@@ -191,10 +442,10 @@ const EmailActions: React.FC<EmailActionsProps> = ({ email, onFetchLyzrData }) =
           return null;
         })()}
 
-        {/* Salesforce Action */}
-        {(() => {
-          const salesforceAction = getValue(extracted_json, 'salesforce_action');
-          const autoAcknowledgment = getValue(extracted_json, 'auto_acknowledgment');
+                 {/* Legacy Structure - Salesforce Action (fallback) */}
+         {!hasNewStructure && (() => {
+           const salesforceAction = getValue(extracted_json, 'salesforce_action_legacy');
+           const autoAcknowledgment = getValue(extracted_json, 'auto_acknowledgment');
           
           if (salesforceAction && salesforceAction !== 'N/A') {
             return (
@@ -219,8 +470,8 @@ const EmailActions: React.FC<EmailActionsProps> = ({ email, onFetchLyzrData }) =
           return null;
         })()}
 
-        {/* Extracted Entities */}
-        {(() => {
+        {/* Legacy Structure - Extracted Entities (fallback) */}
+        {!hasNewStructure && (() => {
           const extractedEntities = getObjectValue(extracted_json, 'extracted_entities');
           const entityKeys = Object.keys(extractedEntities);
           
@@ -272,8 +523,8 @@ const EmailActions: React.FC<EmailActionsProps> = ({ email, onFetchLyzrData }) =
           return null;
         })()}
 
-        {/* Human Review Status */}
-        {(() => {
+        {/* Legacy Structure - Human Review Status (fallback) */}
+        {!hasNewStructure && (() => {
           const requiresHumanReview = getValue(extracted_json, 'requires_human_review', null);
           
           if (requiresHumanReview !== null && requiresHumanReview !== 'N/A') {
@@ -300,11 +551,12 @@ const EmailActions: React.FC<EmailActionsProps> = ({ email, onFetchLyzrData }) =
 
         {/* Additional Fields - Dynamic rendering for any other fields */}
         {(() => {
-          const additionalFields = Object.keys(extracted_json).filter(key => 
-            !['classification', 'confidence_score', 'routing_action', 'key_indicators', 
-              'salesforce_action', 'existing_case_number', 'priority_level', 
-              'auto_acknowledgment', 'requires_human_review', 'extracted_entities'].includes(key)
-          );
+                     const additionalFields = Object.keys(extracted_json).filter(key => 
+             !['classification', 'confidence_score', 'routing_action', 'key_indicators', 
+               'salesforce_action_legacy', 'existing_case_number', 'priority_level', 
+               'auto_acknowledgment', 'requires_human_review', 'extracted_entities',
+               'email_analysis', 'salesforce_action', 'customer_response', 'internal_routing'].includes(key)
+           );
           
           if (additionalFields.length > 0) {
             return (
@@ -392,6 +644,8 @@ const EmailActions: React.FC<EmailActionsProps> = ({ email, onFetchLyzrData }) =
             
           </div>
         </div>
+
+
 
         {/* Lyzr AI Analysis */}
         <div className="bg-white rounded-lg border border-gray-200 p-4">

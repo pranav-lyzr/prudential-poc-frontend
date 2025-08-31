@@ -2,7 +2,195 @@ import { EmailData, LyzrApiResponse } from '../types/email';
 
 const API_BASE_URL = 'https://prudential-poc-backend.ca.lyzr.app';
 
+// Salesforce authentication types
+interface SalesforceLoginResponse {
+  login_url: string;
+  state: string;
+  message: string;
+}
+
+interface SalesforceAuthStatus {
+  isAuthenticated: boolean;
+  expiresAt?: string;
+  userInfo?: {
+    name: string;
+    email: string;
+    orgId: string;
+  };
+}
+
 class ApiService {
+  private salesforceAuthStatus: SalesforceAuthStatus = {
+    isAuthenticated: false
+  };
+
+  constructor() {
+    // Check for existing Salesforce session on initialization
+    this.checkSalesforceAuthStatus();
+  }
+
+  // Salesforce Authentication Methods
+  async getSalesforceLoginUrl(): Promise<SalesforceLoginResponse> {
+    try {
+      console.log('Getting Salesforce login URL...');
+      const response = await this.request<SalesforceLoginResponse>('/api/v1/salesforce/login');
+      
+      // Store the state for callback verification
+      localStorage.setItem('salesforce_state', response.state);
+      
+      return response;
+    } catch (error) {
+      console.error('Failed to get Salesforce login URL:', error);
+      throw error;
+    }
+  }
+
+  async handleSalesforceCallback(code: string, state: string): Promise<void> {
+    try {
+      console.log('Handling Salesforce callback...');
+      
+      // Verify state matches what we stored
+      const storedState = localStorage.getItem('salesforce_state');
+      if (state !== storedState) {
+        throw new Error('Invalid state parameter');
+      }
+
+      // Call the callback endpoint
+      await this.request('/api/v1/salesforce/callback', {
+        method: 'POST',
+        body: JSON.stringify({ code, state }),
+      });
+
+      // Set authentication status with 1 hour expiration
+      const expiresAt = new Date(Date.now() + 60 * 60 * 1000).toISOString();
+      this.setSalesforceAuthStatus(true, expiresAt);
+      
+      // Clear stored state
+      localStorage.removeItem('salesforce_state');
+      
+      console.log('Salesforce authentication successful');
+    } catch (error) {
+      console.error('Salesforce callback failed:', error);
+      throw error;
+    }
+  }
+
+  async logoutSalesforce(): Promise<void> {
+    try {
+      console.log('Logging out from Salesforce...');
+      
+      // Call logout endpoint if available
+      try {
+        await this.request('/api/v1/salesforce/logout', {
+          method: 'POST',
+        });
+      } catch (error) {
+        console.log('Logout endpoint not available, proceeding with local logout');
+      }
+
+      // Clear local authentication status
+      this.setSalesforceAuthStatus(false);
+      
+      console.log('Salesforce logout successful');
+    } catch (error) {
+      console.error('Salesforce logout failed:', error);
+      throw error;
+    }
+  }
+
+  getSalesforceAuthStatus(): SalesforceAuthStatus {
+    return this.salesforceAuthStatus;
+  }
+
+  async refreshSalesforceAuthStatus(): Promise<SalesforceAuthStatus> {
+    try {
+      // Check if we have a stored session
+      const stored = localStorage.getItem('salesforce_auth_status');
+      if (stored) {
+        const status = JSON.parse(stored);
+        
+        // Check if session has expired
+        if (status.expiresAt && new Date(status.expiresAt) <= new Date()) {
+          console.log('Salesforce session expired, logging out');
+          this.setSalesforceAuthStatus(false);
+          return this.salesforceAuthStatus;
+        }
+
+        // If session is still valid, update the timer
+        if (status.isAuthenticated && status.expiresAt) {
+          this.setAutoLogoutTimer(status.expiresAt);
+        }
+
+        this.salesforceAuthStatus = status;
+      }
+      
+      return this.salesforceAuthStatus;
+    } catch (error) {
+      console.error('Error refreshing Salesforce auth status:', error);
+      this.setSalesforceAuthStatus(false);
+      return this.salesforceAuthStatus;
+    }
+  }
+
+  private setSalesforceAuthStatus(isAuthenticated: boolean, expiresAt?: string): void {
+    this.salesforceAuthStatus = {
+      isAuthenticated,
+      expiresAt,
+      userInfo: isAuthenticated ? this.salesforceAuthStatus.userInfo : undefined
+    };
+
+    // Store in localStorage for persistence
+    localStorage.setItem('salesforce_auth_status', JSON.stringify(this.salesforceAuthStatus));
+    
+    // Set auto-logout timer if authenticated
+    if (isAuthenticated && expiresAt) {
+      this.setAutoLogoutTimer(expiresAt);
+    }
+  }
+
+  private checkSalesforceAuthStatus(): void {
+    try {
+      const stored = localStorage.getItem('salesforce_auth_status');
+      if (stored) {
+        const status = JSON.parse(stored);
+        
+        // Check if session has expired
+        if (status.expiresAt && new Date(status.expiresAt) <= new Date()) {
+          console.log('Salesforce session expired, logging out');
+          this.setSalesforceAuthStatus(false);
+          return;
+        }
+
+        this.salesforceAuthStatus = status;
+        
+        // Set auto-logout timer if still authenticated
+        if (status.isAuthenticated && status.expiresAt) {
+          this.setAutoLogoutTimer(status.expiresAt);
+        }
+      }
+    } catch (error) {
+      console.error('Error checking Salesforce auth status:', error);
+      this.setSalesforceAuthStatus(false);
+    }
+  }
+
+  private setAutoLogoutTimer(expiresAt: string): void {
+    const expiryTime = new Date(expiresAt).getTime();
+    const now = Date.now();
+    const timeUntilExpiry = expiryTime - now;
+
+    if (timeUntilExpiry > 0) {
+      console.log(`Setting auto-logout timer for ${new Date(expiresAt).toLocaleString()}`);
+      
+      setTimeout(() => {
+        console.log('Salesforce session expired, auto-logout');
+        this.setSalesforceAuthStatus(false);
+        // You can emit an event here to notify the UI
+        window.dispatchEvent(new CustomEvent('salesforce-session-expired'));
+      }, timeUntilExpiry);
+    }
+  }
+
   private async request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
     const url = `${API_BASE_URL}${endpoint}`;
     
@@ -224,7 +412,7 @@ class ApiService {
             confidence_score: 0.95,
             routing_action: 'finance_team',
             key_indicators: ['quarterly report', 'financial analysis', 'Q4 2024'],
-            salesforce_action: 'ARCHIVE_DOCUMENT',
+            salesforce_action_legacy: 'ARCHIVE_DOCUMENT',
             existing_case_number: null,
             priority_level: 'MEDIUM',
             auto_acknowledgment: 'template_financial_received',
