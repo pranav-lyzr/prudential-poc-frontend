@@ -227,11 +227,13 @@ class ApiService {
   }
 
   // Get all emails
-  async getEmails(): Promise<EmailData[]> {
+  async getEmails(signal?: AbortSignal): Promise<EmailData[]> {
     try {
       console.log('Fetching emails from API...');
-      // Call the real API endpoint
-      const response = await this.request<{ emails: any[]; count: number }>('/api/v1/webhook/emails/all');
+      // Call the real API endpoint with abort signal
+      const response = await this.request<{ emails: any[]; count: number }>('/api/v1/webhook/emails/all', {
+        signal
+      });
       console.log('API response received:', response);
       
       // Transform the API response to match our EmailData interface

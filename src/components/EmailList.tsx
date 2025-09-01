@@ -1,8 +1,9 @@
 import React from 'react';
 import { EmailData } from '../types/email';
-import { Mail, Paperclip, Clock, User } from 'lucide-react';
+import { Mail, Paperclip, Clock, User, RefreshCw } from 'lucide-react';
 import LoadingSpinner from './LoadingSpinner';
-import ErrorMessage from './ErrorMessage';
+// import ErrorMessage from './ErrorMessage';
+import { getApiConfig } from '../config/api';
 
 interface EmailListProps {
   emails: EmailData[];
@@ -13,14 +14,39 @@ interface EmailListProps {
   onRetry: () => void;
 }
 
-const EmailList: React.FC<EmailListProps> = ({ emails, selectedEmailId, loading, error, onEmailSelect, onRetry }) => {
-  const formatTimestamp = (timestamp?: string) => {
-    if (!timestamp) return 'No date';
+const EmailList: React.FC<EmailListProps> = ({
+  emails,
+  selectedEmailId,
+  loading,
+  error,
+  onEmailSelect,
+  onRetry,
+}) => {
+  const apiConfig = getApiConfig();
+  
+  const formatTimestamp = (timestamp: string) => {
     const date = new Date(timestamp);
-    return date.toLocaleDateString() + ' ' + date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    const now = new Date();
+    const diffInHours = (now.getTime() - date.getTime()) / (1000 * 60 * 60);
+    
+    if (diffInHours < 1) {
+      const diffInMinutes = Math.floor(diffInHours * 60);
+      return `${diffInMinutes}m ago`;
+    } else if (diffInHours < 24) {
+      return `${Math.floor(diffInHours)}h ago`;
+    } else {
+      return date.toLocaleDateString();
+    }
   };
 
+  // const getEmailPreview = (body: string) => {
+  //   return body.length > 100 ? `${body.substring(0, 100)}...` : body;
+  // };
 
+  const formatRefreshInterval = (intervalMs: number) => {
+    const seconds = Math.floor(intervalMs / 1000);
+    return `${seconds}s`;
+  };
 
   if (loading) {
     return (
@@ -35,33 +61,43 @@ const EmailList: React.FC<EmailListProps> = ({ emails, selectedEmailId, loading,
 
   if (error) {
     return (
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200">
-        <div className="px-6 py-4 border-b border-gray-200">
-          <h2 className="text-lg font-semibold text-gray-900">Emails</h2>
+      <div className="p-4">
+        <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+          <p className="text-red-800 mb-2">Failed to load emails</p>
+          <button
+            onClick={onRetry}
+            className="bg-red-600 text-white px-3 py-1 rounded text-sm hover:bg-red-700"
+          >
+            Retry
+          </button>
         </div>
-        <ErrorMessage message={error} onRetry={onRetry} />
       </div>
     );
   }
 
   return (
     <div className="h-full flex flex-col">
-      <div className="px-6 py-4 border-b border-gray-200 bg-white">
+      {/* Header with status indicator */}
+      <div className="p-4 border-b border-gray-200 bg-gray-50">
         <div className="flex items-center justify-between">
-          <div>
-            <h2 className="text-lg font-semibold text-gray-900">Emails</h2>
-            <p className="text-sm text-gray-600 mt-1">{emails.length} emails found</p>
+          <h2 className="text-lg font-semibold text-gray-900">Emails</h2>
+          <div className="flex items-center space-x-2 text-sm text-gray-600">
+            {loading ? (
+              <>
+                <RefreshCw className="h-4 w-4 animate-spin" />
+                <span>Fetching...</span>
+              </>
+            ) : (
+              <>
+                <Clock className="h-4 w-4" />
+                <span>Auto-refresh: {formatRefreshInterval(apiConfig.EMAIL_REFRESH_INTERVAL)}</span>
+              </>
+            )}
           </div>
-          <button
-            onClick={onRetry}
-            className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
-            title="Refresh emails"
-          >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-            </svg>
-          </button>
         </div>
+        <p className="text-sm text-gray-500 mt-1">
+          {emails.length} email{emails.length !== 1 ? 's' : ''}
+        </p>
       </div>
       
       <div className="flex-1 divide-y divide-gray-200 overflow-y-auto">
@@ -87,11 +123,11 @@ const EmailList: React.FC<EmailListProps> = ({ emails, selectedEmailId, loading,
                 <span className="truncate">{email.sender}</span>
               </div>
               
-              {/* Timestamp */}
-              <div className="flex items-center space-x-1 text-xs text-gray-500">
-                <Clock className="h-3 w-3" />
-                <span>{formatTimestamp(email.timestamp)}</span>
-              </div>
+                             {/* Timestamp */}
+               <div className="flex items-center space-x-1 text-xs text-gray-500">
+                 <Clock className="h-3 w-3" />
+                 <span>{email.timestamp ? formatTimestamp(email.timestamp) : 'No date'}</span>
+               </div>
               
               {/* Attachments indicator */}
               {email.attachments && email.attachments.length > 0 && (

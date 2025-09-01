@@ -1,6 +1,7 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { EmailData } from '../types/email';
 import { apiService } from '../services/api';
+import { getApiConfig } from '../config/api';
 
 interface UseEmailsReturn {
   emails: EmailData[];
@@ -19,27 +20,87 @@ export const useEmails = (): UseEmailsReturn => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isInitialLoad, setIsInitialLoad] = useState(true);
+  
+  // Add refs to track ongoing requests and prevent overlapping calls
+  const isFetchingRef = useRef(false);
+  const abortControllerRef = useRef<AbortController | null>(null);
+  const retryCountRef = useRef(0);
+  
+  // Get API configuration
+  const apiConfig = getApiConfig();
 
   const fetchEmails = useCallback(async (showLoading = true) => {
+    // Prevent overlapping requests
+    if (isFetchingRef.current) {
+      console.log('Email fetch already in progress, skipping...');
+      return;
+    }
+
     try {
+      isFetchingRef.current = true;
+      
+      // Cancel any ongoing request
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+      
+      // Create new abort controller for this request
+      abortControllerRef.current = new AbortController();
+      
       if (showLoading) {
         setLoading(true);
       }
       setError(null);
-      const fetchedEmails = await apiService.getEmails();
+      
+      console.log('Starting email fetch...');
+      const fetchedEmails = await apiService.getEmails(abortControllerRef.current.signal);
+      
+      // Check if request was aborted
+      if (abortControllerRef.current?.signal.aborted) {
+        console.log('Email fetch was aborted');
+        return;
+      }
+      
+      console.log('Email fetch completed successfully');
       setEmails(fetchedEmails);
       if (isInitialLoad) {
         setIsInitialLoad(false);
       }
+      
+      // Reset retry count on successful fetch
+      retryCountRef.current = 0;
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to fetch emails');
+      // Don't set error if request was aborted
+      if (err instanceof Error && err.name === 'AbortError') {
+        console.log('Email fetch was aborted');
+        return;
+      }
+      
       console.error('Error fetching emails:', err);
+      
+      // Implement retry logic for failed requests
+      if (retryCountRef.current < apiConfig.MAX_RETRY_ATTEMPTS) {
+        retryCountRef.current++;
+        console.log(`Retrying email fetch (attempt ${retryCountRef.current}/${apiConfig.MAX_RETRY_ATTEMPTS})...`);
+        
+        // Wait before retrying
+        setTimeout(() => {
+          fetchEmails(showLoading);
+        }, apiConfig.RETRY_DELAY);
+        
+        return;
+      }
+      
+      // Set error after all retries exhausted
+      setError(err instanceof Error ? err.message : 'Failed to fetch emails');
+      retryCountRef.current = 0; // Reset retry count
     } finally {
+      isFetchingRef.current = false;
       if (showLoading) {
         setLoading(false);
       }
     }
-  }, [isInitialLoad]);
+  }, [isInitialLoad, apiConfig.MAX_RETRY_ATTEMPTS, apiConfig.RETRY_DELAY]);
 
   const fetchLyzrData = useCallback(async (emailId: string) => {
     try {
@@ -122,11 +183,24 @@ export const useEmails = (): UseEmailsReturn => {
   useEffect(() => {
     fetchEmails(true); // Initial load with loading indicator
     
-    // Auto-refresh every 5 seconds without loading indicator
-    const interval = setInterval(() => fetchEmails(false), 5000);
+    // Auto-refresh using configured interval
+    const interval = setInterval(() => {
+      // Only fetch if not currently fetching
+      if (!isFetchingRef.current) {
+        fetchEmails(false);
+      } else {
+        console.log('Skipping scheduled fetch - previous request still in progress');
+      }
+    }, apiConfig.EMAIL_REFRESH_INTERVAL);
     
-    return () => clearInterval(interval);
-  }, [fetchEmails]);
+    return () => {
+      clearInterval(interval);
+      // Abort any ongoing request when component unmounts
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+    };
+  }, [fetchEmails, apiConfig.EMAIL_REFRESH_INTERVAL]);
 
   return {
     emails,
