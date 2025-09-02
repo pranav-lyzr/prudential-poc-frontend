@@ -1,6 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { EmailData } from '../types/email';
-import { Settings, Clock, User, FileText, AlertCircle, Brain, Target, Zap, Shield, MessageSquare, RefreshCw } from 'lucide-react';
+import { Settings, Clock, User, FileText, AlertCircle, Brain, Target, Zap, Shield, MessageSquare, RefreshCw, Star, ThumbsUp, ThumbsDown, HelpCircle } from 'lucide-react';
+import FeedbackModal from './FeedbackModal';
+import { CreateFeedbackRequest } from '../types/feedback';
+import { apiService } from '../services/api';
 
 interface EmailActionsProps {
   email: EmailData | null;
@@ -11,6 +14,8 @@ const EmailActions: React.FC<EmailActionsProps> = ({ email, onFetchLyzrData }) =
   const [lyzrLoading, setLyzrLoading] = useState(false);
   const [lyzrError, setLyzrError] = useState<string | null>(null);
   const [emailVersion, setEmailVersion] = useState(0);
+  const [isFeedbackModalOpen, setIsFeedbackModalOpen] = useState(false);
+  const [feedbackSubmitting, setFeedbackSubmitting] = useState(false);
 
   useEffect(() => {
     console.log('EmailActions received email:', email);
@@ -30,6 +35,39 @@ const EmailActions: React.FC<EmailActionsProps> = ({ email, onFetchLyzrData }) =
       setLyzrError(null);
     }
   }, [email]);
+
+  const handleFeedbackSubmit = async (feedbackData: CreateFeedbackRequest) => {
+    setFeedbackSubmitting(true);
+    try {
+      await apiService.createFeedback(feedbackData);
+      console.log('Feedback submitted successfully');
+      // You could add a success notification here
+    } catch (error) {
+      console.error('Failed to submit feedback:', error);
+      throw error; // Re-throw to let the modal handle the error
+    } finally {
+      setFeedbackSubmitting(false);
+    }
+  };
+
+  // Check if human review is required based on AI analysis
+  const isHumanReviewRequired = () => {
+    if (!email?.lyzrData?.extracted_json) return false;
+    
+    const { extracted_json } = email.lyzrData;
+    
+    // Check new API structure
+    if (extracted_json.internal_routing?.requires_human_review) {
+      return extracted_json.internal_routing.requires_human_review;
+    }
+    
+    // Check legacy structure
+    if (extracted_json.requires_human_review !== undefined) {
+      return extracted_json.requires_human_review;
+    }
+    
+    return false;
+  };
 
   if (!email) {
     return (
@@ -730,7 +768,81 @@ const EmailActions: React.FC<EmailActionsProps> = ({ email, onFetchLyzrData }) =
           
           {renderLyzrData()}
         </div>
+
+        {/* Human Review Section - Only show when human review is required */}
+        {isHumanReviewRequired() && (
+          <div className="bg-white rounded-lg border border-gray-200 p-4">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-sm font-medium text-gray-700">Human Review Required</h3>
+              <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                Review Needed
+              </span>
+            </div>
+            
+            <div className="space-y-3">
+              <p className="text-xs text-gray-600">
+                AI analysis indicates this email requires human review and validation
+              </p>
+              
+              {/* Quick Review Buttons */}
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  onClick={() => setIsFeedbackModalOpen(true)}
+                  disabled={feedbackSubmitting}
+                  className="flex items-center justify-center space-x-2 p-3 border border-gray-200 rounded-lg hover:bg-gray-50 disabled:opacity-50 transition-colors"
+                >
+                  <ThumbsUp className="h-4 w-4 text-green-600" />
+                  <span className="text-sm text-gray-700">Approve</span>
+                </button>
+                
+                <button
+                  onClick={() => setIsFeedbackModalOpen(true)}
+                  disabled={feedbackSubmitting}
+                  className="flex items-center justify-center space-x-2 p-3 border border-gray-200 rounded-lg hover:bg-gray-50 disabled:opacity-50 transition-colors"
+                >
+                  <ThumbsDown className="h-4 w-4 text-red-600" />
+                  <span className="text-sm text-gray-700">Reject</span>
+                </button>
+                
+                <button
+                  onClick={() => setIsFeedbackModalOpen(true)}
+                  disabled={feedbackSubmitting}
+                  className="flex items-center justify-center space-x-2 p-3 border border-gray-200 rounded-lg hover:bg-gray-50 disabled:opacity-50 transition-colors"
+                >
+                  <HelpCircle className="h-4 w-4 text-blue-600" />
+                  <span className="text-sm text-gray-700">Needs Work</span>
+                </button>
+                
+                <button
+                  onClick={() => setIsFeedbackModalOpen(true)}
+                  disabled={feedbackSubmitting}
+                  className="flex items-center justify-center space-x-2 p-3 border border-gray-200 rounded-lg hover:bg-gray-50 disabled:opacity-50 transition-colors"
+                >
+                  <Star className="h-4 w-4 text-yellow-600" />
+                  <span className="text-sm text-gray-700">Rate & Review</span>
+                </button>
+              </div>
+              
+              <button
+                onClick={() => setIsFeedbackModalOpen(true)}
+                disabled={feedbackSubmitting}
+                className="w-full p-2 text-xs text-gray-600 hover:text-gray-800 border border-gray-200 rounded hover:bg-gray-50 disabled:opacity-50 transition-colors"
+              >
+                {feedbackSubmitting ? 'Submitting...' : 'Provide Detailed Review'}
+              </button>
+            </div>
+          </div>
+        )}
       </div>
+
+      {/* Feedback Modal */}
+      <FeedbackModal
+        isOpen={isFeedbackModalOpen}
+        onClose={() => setIsFeedbackModalOpen(false)}
+        onSubmit={handleFeedbackSubmit}
+        emailId={email.id}
+        emailSubject={email.subject || 'No Subject'}
+      />
     </div>
   );
 };

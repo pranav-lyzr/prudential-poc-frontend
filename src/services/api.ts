@@ -1,4 +1,5 @@
 import { EmailData, LyzrApiResponse } from '../types/email';
+import { FeedbackData, FeedbackStats, CreateFeedbackRequest, UpdateFeedbackRequest } from '../types/feedback';
 
 const API_BASE_URL = 'https://prudential-poc-backend.ca.lyzr.app';
 
@@ -517,6 +518,107 @@ class ApiService {
       const dateB = b.timestamp ? new Date(b.timestamp).getTime() : 0;
       return dateB - dateA; // Descending order (latest first)
     });
+  }
+
+  // ===== FEEDBACK API METHODS =====
+
+  // Create feedback
+  async createFeedback(feedbackData: CreateFeedbackRequest): Promise<FeedbackData> {
+    try {
+      console.log('Creating feedback:', feedbackData);
+      const response = await this.request<FeedbackData>('/api/v1/feedback/', {
+        method: 'POST',
+        body: JSON.stringify(feedbackData)
+      });
+      console.log('Feedback created successfully:', response);
+      return response;
+    } catch (error) {
+      console.error('Failed to create feedback:', error);
+      throw error;
+    }
+  }
+
+  // Get feedback by email ID
+  async getFeedbackByEmail(emailId: string): Promise<FeedbackData[]> {
+    try {
+      console.log('Fetching feedback for email:', emailId);
+      const response = await this.request<FeedbackData[]>(`/api/v1/feedback/email/${emailId}`);
+      console.log('Feedback fetched successfully:', response);
+      return response;
+    } catch (error) {
+      console.error('Failed to fetch feedback by email:', error);
+      throw error;
+    }
+  }
+
+  // Get feedback statistics for email
+  async getFeedbackStatsForEmail(emailId: string): Promise<FeedbackStats> {
+    try {
+      console.log('Fetching feedback stats for email:', emailId);
+      const response = await this.request<FeedbackStats>(`/api/v1/feedback/stats/email/${emailId}`);
+      console.log('Feedback stats fetched successfully:', response);
+      return response;
+    } catch (error) {
+      console.error('Failed to fetch feedback stats:', error);
+      throw error;
+    }
+  }
+
+  // Get overall feedback statistics
+  async getOverallFeedbackStats(): Promise<FeedbackStats> {
+    try {
+      console.log('Fetching overall feedback stats');
+      const response = await this.request<FeedbackStats>('/api/v1/feedback/stats/overview');
+      console.log('Overall feedback stats fetched successfully:', response);
+      return response;
+    } catch (error) {
+      console.error('Failed to fetch overall feedback stats:', error);
+      throw error;
+    }
+  }
+
+  // Get available feedback types
+  async getFeedbackTypes(): Promise<string[]> {
+    try {
+      console.log('Fetching available feedback types');
+      const response = await this.request<string[]>('/api/v1/feedback/types/');
+      console.log('Feedback types fetched successfully:', response);
+      return response;
+    } catch (error) {
+      console.error('Failed to fetch feedback types:', error);
+      throw error;
+    }
+  }
+
+  // Update feedback
+  async updateFeedback(feedbackId: string, updateData: UpdateFeedbackRequest): Promise<FeedbackData> {
+    try {
+      console.log('Updating feedback:', feedbackId, updateData);
+      const response = await this.request<FeedbackData>(`/api/v1/feedback/${feedbackId}`, {
+        method: 'PUT',
+        body: JSON.stringify(updateData)
+      });
+      console.log('Feedback updated successfully:', response);
+      return response;
+    } catch (error) {
+      console.error('Failed to update feedback:', error);
+      throw error;
+    }
+  }
+
+  // Delete feedback
+  async deleteFeedback(feedbackId: string): Promise<{ message: string }> {
+    try {
+      console.log('Deleting feedback:', feedbackId);
+      const response = await this.request<{ message: string }>(`/api/v1/feedback/${feedbackId}`, {
+        method: 'DELETE'
+      });
+      console.log('Feedback deleted successfully:', response);
+      return response;
+    } catch (error) {
+      console.error('Failed to delete feedback:', error);
+      throw error;
+    }
   }
 }
 

@@ -1,12 +1,34 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { EmailData } from '../types/email';
-import { Mail, Paperclip, Clock, User, Users, FileText } from 'lucide-react';
+import { Mail, Paperclip, Clock, User, Users, FileText, MessageSquare } from 'lucide-react';
+import FeedbackSection from './FeedbackSection';
 
 interface EmailDetailProps {
   email: EmailData | null;
 }
 
 const EmailDetail: React.FC<EmailDetailProps> = ({ email }) => {
+  const [showFeedback, setShowFeedback] = useState(false);
+
+  // Check if human review is required based on AI analysis
+  const isHumanReviewRequired = () => {
+    if (!email?.lyzrData?.extracted_json) return false;
+    
+    const { extracted_json } = email.lyzrData;
+    
+    // Check new API structure
+    if (extracted_json.internal_routing?.requires_human_review) {
+      return extracted_json.internal_routing.requires_human_review;
+    }
+    
+    // Check legacy structure
+    if (extracted_json.requires_human_review !== undefined) {
+      return extracted_json.requires_human_review;
+    }
+    
+    return false;
+  };
+
   if (!email) {
     return (
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-8 text-center">
@@ -55,75 +77,100 @@ const EmailDetail: React.FC<EmailDetailProps> = ({ email }) => {
             </div>
           </div>
           
-          
-        </div>
-      </div>
-
-      {/* Recipients */}
-      <div className="px-6 py-4 border-b border-gray-200">
-        <div className="flex items-center space-x-2 mb-2">
-          <Users className="h-4 w-4 text-gray-500" />
-          <span className="text-sm font-medium text-gray-700">Recipients:</span>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          {email.recipients.map((recipient, index) => (
-            <span
-              key={index}
-              className="px-2 py-1 bg-gray-100 text-gray-700 text-sm rounded-md"
+          {/* Human Review Toggle Button - Only show when human review is required */}
+          {isHumanReviewRequired() && (
+            <button
+              onClick={() => setShowFeedback(!showFeedback)}
+              className={`flex items-center space-x-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                showFeedback
+                  ? 'bg-gray-900 text-white'
+                  : 'bg-red-100 text-red-700 hover:bg-red-200'
+              }`}
             >
-              {recipient}
-            </span>
-          ))}
-        </div>
-      </div>
-
-      {/* Body */}
-      <div className="px-6 py-4 border-b border-gray-200 flex-1 overflow-y-auto" style={{ height: 'calc(100% - 200px)' }}>
-        <div className="flex items-center space-x-2 mb-3">
-          <FileText className="h-4 w-4 text-gray-500" />
-          <span className="text-sm font-medium text-gray-700">Email Body:</span>
-        </div>
-        <div className="bg-gray-50 rounded-lg p-4">
-          {email.body ? (
-            <div 
-              className="text-gray-800 prose prose-sm max-w-none"
-              dangerouslySetInnerHTML={{ __html: email.body }}
-            />
-          ) : (
-            <p className="text-gray-500 italic">No email body content</p>
+              <MessageSquare className="h-4 w-4" />
+              <span>{showFeedback ? 'View Email' : 'View Reviews'}</span>
+            </button>
           )}
         </div>
       </div>
 
-      {/* Attachments */}
-      {email.attachments && email.attachments.length > 0 && (
-        <div className="px-6 py-4 border-b border-gray-200">
-          <div className="flex items-center space-x-2 mb-3">
-            <Paperclip className="h-4 w-4 text-gray-500" />
-            <span className="text-sm font-medium text-gray-700">Attachments:</span>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            {email.attachments.map((attachment) => (
-              <div
-                key={attachment.id}
-                className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg border border-gray-200"
-              >
-                <Paperclip className="h-5 w-5 text-gray-400 flex-shrink-0" />
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-gray-900 truncate">
-                    {attachment.name}
-                  </p>
-                  <p className="text-xs text-gray-500">
-                    {formatFileSize(attachment.size)} • {attachment.type}
-                  </p>
-                </div>
-              </div>
-            ))}
-          </div>
+      {/* Content Area - Either Email Content or Review Dashboard */}
+      {showFeedback ? (
+        /* Human Review Dashboard - Full Screen */
+        <div className="flex-1 overflow-y-auto">
+          <FeedbackSection 
+            emailId={email.id} 
+            emailSubject={email.subject || 'No Subject'} 
+          />
         </div>
-      )}
+      ) : (
+        /* Email Content */
+        <>
+          {/* Recipients */}
+          <div className="px-6 py-4 border-b border-gray-200">
+            <div className="flex items-center space-x-2 mb-2">
+              <Users className="h-4 w-4 text-gray-500" />
+              <span className="text-sm font-medium text-gray-700">Recipients:</span>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {email.recipients.map((recipient, index) => (
+                <span
+                  key={index}
+                  className="px-2 py-1 bg-gray-100 text-gray-700 text-sm rounded-md"
+                >
+                  {recipient}
+                </span>
+              ))}
+            </div>
+          </div>
 
-      
+          {/* Body */}
+          <div className="px-6 py-4 border-b border-gray-200 flex-1 overflow-y-auto" style={{ height: 'calc(100% - 200px)' }}>
+            <div className="flex items-center space-x-2 mb-3">
+              <FileText className="h-4 w-4 text-gray-500" />
+              <span className="text-sm font-medium text-gray-700">Email Body:</span>
+            </div>
+            <div className="bg-gray-50 rounded-lg p-4">
+              {email.body ? (
+                <div 
+                  className="text-gray-800 prose prose-sm max-w-none"
+                  dangerouslySetInnerHTML={{ __html: email.body }}
+                />
+              ) : (
+                <p className="text-gray-500 italic">No email body content</p>
+              )}
+            </div>
+          </div>
+
+          {/* Attachments */}
+          {email.attachments && email.attachments.length > 0 && (
+            <div className="px-6 py-4 border-b border-gray-200">
+              <div className="flex items-center space-x-2 mb-3">
+                <Paperclip className="h-4 w-4 text-gray-500" />
+                <span className="text-sm font-medium text-gray-700">Attachments:</span>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                {email.attachments.map((attachment) => (
+                  <div
+                    key={attachment.id}
+                    className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg border border-gray-200"
+                  >
+                    <Paperclip className="h-5 w-5 text-gray-400 flex-shrink-0" />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-gray-900 truncate">
+                        {attachment.name}
+                      </p>
+                      <p className="text-xs text-gray-500">
+                        {formatFileSize(attachment.size)} • {attachment.type}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </>
+      )}
     </div>
   );
 };
