@@ -648,7 +648,7 @@ const EmailActions: React.FC<EmailActionsProps> = ({ email, onFetchLyzrData }) =
   };
 
   return (
-    <div className="h-full">
+    <div className="h-full h-600">
       {/* Header */}
       <div className="px-6 py-4 border-b border-gray-200 bg-white">
         <h2 className="text-lg font-semibold text-gray-900">Actions</h2>
