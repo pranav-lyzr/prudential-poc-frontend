@@ -1,7 +1,7 @@
 import { EmailData, LyzrApiResponse } from '../types/email';
 import { FeedbackData, FeedbackStats, CreateFeedbackRequest, UpdateFeedbackRequest } from '../types/feedback';
 
-const API_BASE_URL = 'https://prudential-poc-backend.ca.lyzr.app';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://prudential-poc-backend.ca.lyzr.app';
 
 // Salesforce authentication types
 interface SalesforceLoginResponse {
@@ -21,13 +21,8 @@ interface SalesforceAuthStatus {
 }
 
 class ApiService {
-  private salesforceAuthStatus: SalesforceAuthStatus = {
-    isAuthenticated: false
-  };
-
   constructor() {
-    // Check for existing Salesforce session on initialization
-    this.checkSalesforceAuthStatus();
+    // No longer need to check localStorage on initialization
   }
 
   // Salesforce Authentication Methods
@@ -35,10 +30,10 @@ class ApiService {
     try {
       console.log('Getting Salesforce login URL...');
       const response = await this.request<SalesforceLoginResponse>('/api/v1/salesforce/login');
-      
+
       // Store the state for callback verification
       localStorage.setItem('salesforce_state', response.state);
-      
+
       return response;
     } catch (error) {
       console.error('Failed to get Salesforce login URL:', error);
@@ -49,7 +44,7 @@ class ApiService {
   async handleSalesforceCallback(code: string, state: string): Promise<void> {
     try {
       console.log('Handling Salesforce callback...');
-      
+
       // Verify state matches what we stored
       const storedState = localStorage.getItem('salesforce_state');
       if (state !== storedState) {
@@ -62,13 +57,9 @@ class ApiService {
         body: JSON.stringify({ code, state }),
       });
 
-      // Set authentication status with 1 hour expiration
-      const expiresAt = new Date(Date.now() + 60 * 60 * 1000).toISOString();
-      this.setSalesforceAuthStatus(true, expiresAt);
-      
       // Clear stored state
       localStorage.removeItem('salesforce_state');
-      
+
       console.log('Salesforce authentication successful');
     } catch (error) {
       console.error('Salesforce callback failed:', error);
@@ -79,7 +70,7 @@ class ApiService {
   async logoutSalesforce(): Promise<void> {
     try {
       console.log('Logging out from Salesforce...');
-      
+
       // Call logout endpoint if available
       try {
         await this.request('/api/v1/salesforce/logout', {
@@ -89,9 +80,6 @@ class ApiService {
         console.log('Logout endpoint not available, proceeding with local logout');
       }
 
-      // Clear local authentication status
-      this.setSalesforceAuthStatus(false);
-      
       console.log('Salesforce logout successful');
     } catch (error) {
       console.error('Salesforce logout failed:', error);
@@ -99,102 +87,43 @@ class ApiService {
     }
   }
 
-  getSalesforceAuthStatus(): SalesforceAuthStatus {
-    return this.salesforceAuthStatus;
-  }
-
-  async refreshSalesforceAuthStatus(): Promise<SalesforceAuthStatus> {
+  async getSalesforceAuthStatus(): Promise<SalesforceAuthStatus> {
     try {
-      // Check if we have a stored session
-      const stored = localStorage.getItem('salesforce_auth_status');
-      if (stored) {
-        const status = JSON.parse(stored);
-        
-        // Check if session has expired
-        if (status.expiresAt && new Date(status.expiresAt) <= new Date()) {
-          console.log('Salesforce session expired, logging out');
-          this.setSalesforceAuthStatus(false);
-          return this.salesforceAuthStatus;
-        }
+      // Always check API status instead of localStorage
+      const status = await this.getSalesforceStatus();
 
-        // If session is still valid, update the timer
-        if (status.isAuthenticated && status.expiresAt) {
-          this.setAutoLogoutTimer(status.expiresAt);
-        }
-
-        this.salesforceAuthStatus = status;
-      }
-      
-      return this.salesforceAuthStatus;
+      return {
+        isAuthenticated: status.authenticated || false,
+        expiresAt: status.token_expiry_timestamp || undefined,
+        userInfo: status.authenticated ? {
+          name: status.user_id || 'Unknown',
+          email: status.user_id || 'Unknown',
+          orgId: status.instance_url || 'Unknown'
+        } : undefined
+      };
     } catch (error) {
-      console.error('Error refreshing Salesforce auth status:', error);
-      this.setSalesforceAuthStatus(false);
-      return this.salesforceAuthStatus;
+      console.error('Error getting Salesforce auth status:', error);
+      return {
+        isAuthenticated: false
+      };
     }
   }
 
-  private setSalesforceAuthStatus(isAuthenticated: boolean, expiresAt?: string): void {
-    this.salesforceAuthStatus = {
-      isAuthenticated,
-      expiresAt,
-      userInfo: isAuthenticated ? this.salesforceAuthStatus.userInfo : undefined
-    };
-
-    // Store in localStorage for persistence
-    localStorage.setItem('salesforce_auth_status', JSON.stringify(this.salesforceAuthStatus));
-    
-    // Set auto-logout timer if authenticated
-    if (isAuthenticated && expiresAt) {
-      this.setAutoLogoutTimer(expiresAt);
-    }
-  }
-
-  private checkSalesforceAuthStatus(): void {
+  async getSalesforceStatus(): Promise<any> {
     try {
-      const stored = localStorage.getItem('salesforce_auth_status');
-      if (stored) {
-        const status = JSON.parse(stored);
-        
-        // Check if session has expired
-        if (status.expiresAt && new Date(status.expiresAt) <= new Date()) {
-          console.log('Salesforce session expired, logging out');
-          this.setSalesforceAuthStatus(false);
-          return;
-        }
-
-        this.salesforceAuthStatus = status;
-        
-        // Set auto-logout timer if still authenticated
-        if (status.isAuthenticated && status.expiresAt) {
-          this.setAutoLogoutTimer(status.expiresAt);
-        }
-      }
+      console.log('Getting Salesforce status...');
+      const response = await this.request('/api/v1/salesforce/status');
+      return response;
     } catch (error) {
-      console.error('Error checking Salesforce auth status:', error);
-      this.setSalesforceAuthStatus(false);
+      console.error('Failed to get Salesforce status:', error);
+      throw error;
     }
   }
 
-  private setAutoLogoutTimer(expiresAt: string): void {
-    const expiryTime = new Date(expiresAt).getTime();
-    const now = Date.now();
-    const timeUntilExpiry = expiryTime - now;
-
-    if (timeUntilExpiry > 0) {
-      console.log(`Setting auto-logout timer for ${new Date(expiresAt).toLocaleString()}`);
-      
-      setTimeout(() => {
-        console.log('Salesforce session expired, auto-logout');
-        this.setSalesforceAuthStatus(false);
-        // You can emit an event here to notify the UI
-        window.dispatchEvent(new CustomEvent('salesforce-session-expired'));
-      }, timeUntilExpiry);
-    }
-  }
 
   private async request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
     const url = `${API_BASE_URL}${endpoint}`;
-    
+
     const config: RequestInit = {
       headers: {
         'Content-Type': 'application/json',
@@ -206,26 +135,46 @@ class ApiService {
     try {
       console.log('API request: Making request to:', url);
       console.log('API request: Config:', config);
-      
+
       const response = await fetch(url, config);
       console.log('API request: Response status:', response.status);
       console.log('API request: Response headers:', response.headers);
-      
+
       if (!response.ok) {
+        // Handle 401 errors by checking Salesforce token status
+        if (response.status === 401) {
+          console.log('API request: Received 401, checking Salesforce token status...');
+
+          try {
+            // Check if tokens are still valid via status endpoint
+            const status = await this.getSalesforceStatus();
+            if (!status.authenticated) {
+              console.log('Tokens are invalid, user needs to re-authenticate');
+              // Emit event to notify UI of authentication failure
+              window.dispatchEvent(new CustomEvent('salesforce-auth-failed'));
+            }
+          } catch (statusError) {
+            console.error('Token status check failed:', statusError);
+            // Emit event to notify UI of authentication failure
+            window.dispatchEvent(new CustomEvent('salesforce-auth-failed'));
+          }
+        }
+
         const errorText = await response.text();
         console.error('API request: Error response body:', errorText);
         throw new Error(`HTTP error! status: ${response.status}, body: ${errorText}`);
       }
-      
+
       const responseData = await response.json();
       console.log('API request: Response data:', responseData);
-      
+
       return responseData;
     } catch (error) {
       console.error('API request failed:', error);
       throw error;
     }
   }
+
 
   // Get all emails
   async getEmails(signal?: AbortSignal): Promise<EmailData[]> {
@@ -236,7 +185,7 @@ class ApiService {
         signal
       });
       console.log('API response received:', response);
-      
+
       // Transform the API response to match our EmailData interface
       const transformedEmails = response.emails.map(email => {
         console.log('Transforming email:', email);
@@ -244,14 +193,14 @@ class ApiService {
         console.log('Transformed email:', transformed);
         return transformed;
       });
-      
+
       // Sort emails by timestamp in descending order (latest first)
       const sortedEmails = transformedEmails.sort((a, b) => {
         const dateA = a.timestamp ? new Date(a.timestamp).getTime() : 0;
         const dateB = b.timestamp ? new Date(b.timestamp).getTime() : 0;
         return dateB - dateA; // Descending order (latest first)
       });
-      
+
       console.log('Final transformed emails:', sortedEmails);
       return sortedEmails;
     } catch (error) {
@@ -266,20 +215,20 @@ class ApiService {
     try {
       console.log(`Fetching Lyzr data for email ID: ${emailId}`);
       console.log(`Email ID type: ${typeof emailId}, length: ${emailId.length}`);
-      
+
       // For Lyzr API, we need to use the message_id, not the _id
       // The emailId parameter should be the message_id from the email
       const encodedEmailId = encodeURIComponent(emailId);
       const url = `/api/v1/webhook/emails/${encodedEmailId}/lyzr-data`;
-      
+
       console.log(`Lyzr API URL: ${url}`);
       console.log(`Full Lyzr API URL: ${API_BASE_URL}${url}`);
       console.log(`Original emailId: ${emailId}`);
       console.log(`Encoded emailId: ${encodedEmailId}`);
-      
+
       const response = await this.request<LyzrApiResponse>(url);
       console.log('Lyzr API response received:', response);
-      
+
       return response;
     } catch (error) {
       console.error(`Failed to fetch Lyzr data for email ${emailId}:`, error);
@@ -333,16 +282,16 @@ class ApiService {
   async testLyzrEndpoint(): Promise<LyzrApiResponse> {
     try {
       console.log('Testing Lyzr API endpoint...');
-      
+
       // Use the example message ID from the user's curl command
       const testMessageId = 'AAMkAGFlYjU0ZDcyLTQwN2MtNDY2OC05MDlkLWI1MTYwZDI4Mzk0MQBGAAAAAAAbbYndWHI-TZ_6NpZEpYvyBwCifDyVNCg4RZszsE4CITOpAAAAAAEMAACifDyVNCg4RZszsE4CITOpAAAEoaqSAAA%3D';
-      
+
       console.log('Test message ID:', testMessageId);
       console.log('Test message ID length:', testMessageId.length);
-      
+
       const response = await this.getLyzrData(testMessageId);
       console.log('Test Lyzr API response:', response);
-      
+
       return response;
     } catch (error) {
       console.error('Test Lyzr API failed:', error);
@@ -355,7 +304,7 @@ class ApiService {
     console.log('transformApiEmail: Raw API email:', apiEmail);
     console.log('transformApiEmail: _id:', apiEmail._id);
     console.log('transformApiEmail: message_id:', apiEmail.message_id);
-    
+
     const transformed = {
       id: apiEmail._id || apiEmail.message_id, // Use _id as primary, fallback to message_id
       messageId: apiEmail.message_id, // Store message_id separately for Lyzr API calls
@@ -368,7 +317,7 @@ class ApiService {
       is_read: apiEmail.is_read || false,
       // Action is optional in the type, so we can omit it
     };
-    
+
     console.log('transformApiEmail: Transformed email:', transformed);
     return transformed;
   }
