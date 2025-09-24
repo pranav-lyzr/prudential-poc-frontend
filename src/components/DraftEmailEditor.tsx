@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { EmailData } from '../types/email';
-import { Save, Send, X, RefreshCw, AlertCircle, Eye, EyeOff, Edit } from 'lucide-react';
+import { Save, Send, X, RefreshCw, AlertCircle, Eye, Edit } from 'lucide-react';
 
 interface DraftEmailEditorProps {
   email: EmailData;
