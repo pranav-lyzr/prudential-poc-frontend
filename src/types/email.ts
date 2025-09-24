@@ -10,6 +10,7 @@ export interface EmailData {
   action?: EmailAction;
   is_read?: boolean;
   lyzrData?: LyzrData;
+  draftData?: DraftData;
 }
 
 export interface EmailAttachment {
@@ -37,6 +38,18 @@ export interface LyzrData {
   processed_at: string;
   success: boolean;
   error: string | null;
+}
+
+export interface DraftData {
+  _id?: string;
+  email_id: string;
+  custom_draft_message?: string;
+  draft_edited: boolean;
+  draft_edited_at?: string;
+  acknowledgment_email_sent: boolean;
+  acknowledgment_email_sent_at?: string;
+  created_at?: string;
+  updated_at?: string;
 }
 
 export interface LyzrExtractedData {

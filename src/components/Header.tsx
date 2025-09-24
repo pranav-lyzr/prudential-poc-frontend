@@ -1,9 +1,17 @@
 import React, { useState, useEffect } from 'react';
-import { Activity, Wifi, WifiOff } from 'lucide-react';
+import { Activity, Wifi, WifiOff, Mail, LayoutDashboard } from 'lucide-react';
 import { apiService } from '../services/api';
 import SalesforceAuth from './SalesforceAuth';
 
-const Header: React.FC = () => {
+interface HeaderProps {
+  currentView?: 'emails' | 'dashboard';
+  onViewChange?: (view: 'emails' | 'dashboard') => void;
+}
+
+const Header: React.FC<HeaderProps> = ({
+  currentView = 'emails',
+  onViewChange
+}) => {
   const [backendStatus, setBackendStatus] = useState<'connected' | 'disconnected' | 'checking'>('checking');
 
   useEffect(() => {
@@ -18,7 +26,7 @@ const Header: React.FC = () => {
     };
 
     checkBackendStatus();
-    
+
     // Check status every 30 seconds
     const interval = setInterval(checkBackendStatus, 30000);
     return () => clearInterval(interval);
@@ -57,7 +65,7 @@ const Header: React.FC = () => {
         <div className="flex items-center space-x-3">
           <div className="flex items-center justify-center w-10 h-10 bg-blue-600 rounded-lg">
             <svg className="h-6 w-6 text-white" viewBox="0 0 24 24" fill="currentColor">
-              <path d="M12 2L2 7v10c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V7l-10-5z"/>
+              <path d="M12 2L2 7v10c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V7l-10-5z" />
             </svg>
           </div>
           <div>
@@ -65,21 +73,44 @@ const Header: React.FC = () => {
             <p className="text-sm text-gray-600">Email Processing & Management System</p>
           </div>
         </div>
-        
+
         <div className="flex items-center space-x-4">
+          {/* Navigation Buttons */}
+          <div className="flex items-center space-x-2">
+            <button
+              onClick={() => onViewChange?.('emails')}
+              className={`flex items-center space-x-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${currentView === 'emails'
+                ? 'bg-blue-100 text-blue-700'
+                : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+                }`}
+            >
+              <Mail className="h-4 w-4" />
+              <span>Emails</span>
+            </button>
+
+            <button
+              onClick={() => onViewChange?.('dashboard')}
+              className={`flex items-center space-x-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${currentView === 'dashboard'
+                ? 'bg-blue-100 text-blue-700'
+                : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+                }`}
+            >
+              <LayoutDashboard className="h-4 w-4" />
+              <span>Dashboard</span>
+            </button>
+          </div>
+
           {/* Salesforce Authentication */}
           <SalesforceAuth />
-          
+
           {/* Backend Status */}
-          <div className={`flex items-center space-x-2 px-3 py-2 rounded-lg ${
-            backendStatus === 'connected' ? 'bg-green-100' : 
+          <div className={`flex items-center space-x-2 px-3 py-2 rounded-lg ${backendStatus === 'connected' ? 'bg-green-100' :
             backendStatus === 'disconnected' ? 'bg-red-100' : 'bg-yellow-100'
-          }`}>
-            {getStatusIcon()}
-            <span className={`text-sm font-medium ${
-              backendStatus === 'connected' ? 'text-green-700' : 
-              backendStatus === 'disconnected' ? 'text-red-700' : 'text-yellow-700'
             }`}>
+            {getStatusIcon()}
+            <span className={`text-sm font-medium ${backendStatus === 'connected' ? 'text-green-700' :
+              backendStatus === 'disconnected' ? 'text-red-700' : 'text-yellow-700'
+              }`}>
               {backendStatus === 'connected' ? 'Webhook Connected' : getStatusText()}
             </span>
             <div className={`w-2 h-2 rounded-full ${getStatusColor()}`}></div>

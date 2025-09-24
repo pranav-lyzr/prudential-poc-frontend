@@ -17,14 +17,15 @@ const EmailActions: React.FC<EmailActionsProps> = ({ email, onFetchLyzrData }) =
   const [isFeedbackModalOpen, setIsFeedbackModalOpen] = useState(false);
   const [feedbackSubmitting, setFeedbackSubmitting] = useState(false);
 
+
   useEffect(() => {
     console.log('EmailActions received email:', email);
     console.log('Email ID:', email?.id);
     console.log('Email has Lyzr data:', !!email?.lyzrData);
-    
+
     // Increment email version to force re-render
     setEmailVersion(prev => prev + 1);
-    
+
     if (email && !email.lyzrData) {
       console.log('Email has no Lyzr data, setting loading state');
       setLyzrLoading(true);
@@ -50,22 +51,23 @@ const EmailActions: React.FC<EmailActionsProps> = ({ email, onFetchLyzrData }) =
     }
   };
 
+
   // Check if human review is required based on AI analysis
   const isHumanReviewRequired = () => {
     if (!email?.lyzrData?.extracted_json) return false;
-    
+
     const { extracted_json } = email.lyzrData;
-    
+
     // Check new API structure
     if (extracted_json.internal_routing?.requires_human_review) {
       return extracted_json.internal_routing.requires_human_review;
     }
-    
+
     // Check legacy structure
     if (extracted_json.requires_human_review !== undefined) {
       return extracted_json.requires_human_review;
     }
-    
+
     return false;
   };
 
@@ -86,7 +88,7 @@ const EmailActions: React.FC<EmailActionsProps> = ({ email, onFetchLyzrData }) =
     console.log('email.lyzrData:', email.lyzrData);
     console.log('email.lyzrData type:', typeof email.lyzrData);
     console.log('email.lyzrData keys:', email.lyzrData ? Object.keys(email.lyzrData) : 'null');
-    
+
     if (lyzrError) {
       return (
         <div className="bg-red-50 border border-red-200 rounded-lg p-4">
@@ -179,7 +181,7 @@ const EmailActions: React.FC<EmailActionsProps> = ({ email, onFetchLyzrData }) =
                 <p className="text-xs text-blue-700">AI Classification & Priority</p>
               </div>
             </div>
-            
+
             <div className="grid grid-cols-2 gap-3 text-sm mb-3">
               <div className="bg-white rounded-lg p-3 border border-blue-100">
                 <p className="text-xs font-medium text-blue-600 mb-1">Classification</p>
@@ -242,9 +244,9 @@ const EmailActions: React.FC<EmailActionsProps> = ({ email, onFetchLyzrData }) =
                 <div className="grid grid-cols-2 gap-2 text-xs">
                   {Object.entries(extracted_json.email_analysis.extracted_entities).map(([key, value]) => {
                     if (!value || value === null) return null;
-                    
+
                     const displayKey = key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
-                    
+
                     if (Array.isArray(value)) {
                       return (
                         <div key={key} className="bg-white rounded p-2 border border-blue-100">
@@ -262,7 +264,7 @@ const EmailActions: React.FC<EmailActionsProps> = ({ email, onFetchLyzrData }) =
                         </div>
                       );
                     }
-                    
+
                     return (
                       <div key={key} className="bg-white rounded p-2 border border-blue-100">
                         <p className="font-medium text-blue-700">{displayKey}:</p>
@@ -290,7 +292,7 @@ const EmailActions: React.FC<EmailActionsProps> = ({ email, onFetchLyzrData }) =
                   <p className="text-xs text-purple-700">Case Management Details</p>
                 </div>
               </div>
-              
+
               <div className="grid grid-cols-2 gap-3 text-sm mb-3">
                 <div className="bg-white rounded-lg p-3 border border-purple-100">
                   <p className="text-xs font-medium text-purple-600 mb-1">Action Type</p>
@@ -316,11 +318,10 @@ const EmailActions: React.FC<EmailActionsProps> = ({ email, onFetchLyzrData }) =
               </div>
 
               <div className="flex space-x-2 mt-3">
-                <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
-                  salesforceAction.comment_added 
-                    ? 'bg-green-100 text-green-800' 
-                    : 'bg-gray-100 text-gray-800'
-                }`}>
+                <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${salesforceAction.comment_added
+                  ? 'bg-green-100 text-green-800'
+                  : 'bg-gray-100 text-gray-800'
+                  }`}>
                   {salesforceAction.comment_added ? 'Comment Added' : 'No Comment'}
                 </span>
                 {salesforceAction.comment_id && (
@@ -345,23 +346,23 @@ const EmailActions: React.FC<EmailActionsProps> = ({ email, onFetchLyzrData }) =
                 <p className="text-xs text-green-700">Auto-Response & Next Steps</p>
               </div>
             </div>
-            
+
             <div className="space-y-3">
               <div className="bg-white rounded-lg p-3 border border-green-100">
                 <p className="text-xs font-medium text-green-600 mb-1">Auto-Acknowledgment Template</p>
                 <p className="font-semibold text-green-900">{extracted_json.customer_response.auto_acknowledgment}</p>
               </div>
-              
+
               <div className="bg-white rounded-lg p-3 border border-green-100">
                 <p className="text-xs font-medium text-green-600 mb-1">Estimated Response Time</p>
                 <p className="font-semibold text-green-900">{extracted_json.customer_response.estimated_response_time}</p>
               </div>
-              
+
               <div className="bg-white rounded-lg p-3 border border-green-100">
                 <p className="text-xs font-medium text-green-600 mb-1">Case Reference</p>
                 <p className="font-semibold text-green-900">{extracted_json.customer_response.case_reference}</p>
               </div>
-              
+
               <div className="bg-white rounded-lg p-3 border border-green-100">
                 <p className="text-xs font-medium text-green-600 mb-1">Next Steps</p>
                 <p className="text-sm text-green-900 leading-relaxed">{extracted_json.customer_response.next_steps}</p>
@@ -382,7 +383,7 @@ const EmailActions: React.FC<EmailActionsProps> = ({ email, onFetchLyzrData }) =
                 <p className="text-xs text-orange-700">Team Assignment & Review Status</p>
               </div>
             </div>
-            
+
             <div className="grid grid-cols-2 gap-3 text-sm mb-3">
               <div className="bg-white rounded-lg p-3 border border-orange-100">
                 <p className="text-xs font-medium text-orange-600 mb-1">Specialist Team</p>
@@ -395,18 +396,16 @@ const EmailActions: React.FC<EmailActionsProps> = ({ email, onFetchLyzrData }) =
             </div>
 
             <div className="flex space-x-2">
-              <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
-                extracted_json.internal_routing.requires_human_review 
-                  ? 'bg-red-100 text-red-800' 
-                  : 'bg-green-100 text-green-800'
-              }`}>
+              <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${extracted_json.internal_routing.requires_human_review
+                ? 'bg-red-100 text-red-800'
+                : 'bg-green-100 text-green-800'
+                }`}>
                 {extracted_json.internal_routing.requires_human_review ? 'Human Review Required' : 'No Human Review Needed'}
               </span>
-              <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
-                extracted_json.internal_routing.escalation_needed 
-                  ? 'bg-red-100 text-red-800' 
-                  : 'bg-green-100 text-green-800'
-              }`}>
+              <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${extracted_json.internal_routing.escalation_needed
+                ? 'bg-red-100 text-red-800'
+                : 'bg-green-100 text-green-800'
+                }`}>
                 {extracted_json.internal_routing.escalation_needed ? 'Escalation Needed' : 'No Escalation'}
               </span>
             </div>
@@ -425,7 +424,7 @@ const EmailActions: React.FC<EmailActionsProps> = ({ email, onFetchLyzrData }) =
                 <p className="text-xs text-blue-700">Lyzr AI Analysis Results</p>
               </div>
             </div>
-            
+
             <div className="grid grid-cols-2 gap-3 text-sm">
               <div className="bg-white rounded-lg p-3 border border-blue-100">
                 <p className="text-xs font-medium text-blue-600 mb-1">Classification</p>
@@ -434,7 +433,7 @@ const EmailActions: React.FC<EmailActionsProps> = ({ email, onFetchLyzrData }) =
               <div className="bg-white rounded-lg p-3 border border-blue-100">
                 <p className="text-xs font-medium text-blue-600 mb-1">Confidence</p>
                 <p className="font-semibold text-blue-900">
-                  {getValue(extracted_json, 'confidence_score', 0) > 0 
+                  {getValue(extracted_json, 'confidence_score', 0) > 0
                     ? `${(getValue(extracted_json, 'confidence_score', 0) * 100).toFixed(0)}%`
                     : 'N/A'
                   }
@@ -480,11 +479,11 @@ const EmailActions: React.FC<EmailActionsProps> = ({ email, onFetchLyzrData }) =
           return null;
         })()}
 
-                 {/* Legacy Structure - Salesforce Action (fallback) */}
-         {!hasNewStructure && (() => {
-           const salesforceAction = getValue(extracted_json, 'salesforce_action_legacy');
-           const autoAcknowledgment = getValue(extracted_json, 'auto_acknowledgment');
-          
+        {/* Legacy Structure - Salesforce Action (fallback) */}
+        {!hasNewStructure && (() => {
+          const salesforceAction = getValue(extracted_json, 'salesforce_action_legacy');
+          const autoAcknowledgment = getValue(extracted_json, 'auto_acknowledgment');
+
           if (salesforceAction && salesforceAction !== 'N/A') {
             return (
               <div className="bg-white rounded-lg border border-gray-200 p-4">
@@ -512,7 +511,7 @@ const EmailActions: React.FC<EmailActionsProps> = ({ email, onFetchLyzrData }) =
         {!hasNewStructure && (() => {
           const extractedEntities = getObjectValue(extracted_json, 'extracted_entities');
           const entityKeys = Object.keys(extractedEntities);
-          
+
           if (entityKeys.length > 0) {
             return (
               <div className="bg-white rounded-lg border border-gray-200 p-4">
@@ -526,9 +525,9 @@ const EmailActions: React.FC<EmailActionsProps> = ({ email, onFetchLyzrData }) =
                   {entityKeys.map((key) => {
                     const value = extractedEntities[key];
                     if (!value || value === 'N/A') return null;
-                    
+
                     const displayKey = key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
-                    
+
                     if (Array.isArray(value)) {
                       return (
                         <div key={key} className="text-sm">
@@ -546,7 +545,7 @@ const EmailActions: React.FC<EmailActionsProps> = ({ email, onFetchLyzrData }) =
                         </div>
                       );
                     }
-                    
+
                     return (
                       <div key={key} className="text-sm">
                         <p className="font-medium text-gray-700">{displayKey}:</p>
@@ -564,7 +563,7 @@ const EmailActions: React.FC<EmailActionsProps> = ({ email, onFetchLyzrData }) =
         {/* Legacy Structure - Human Review Status (fallback) */}
         {!hasNewStructure && (() => {
           const requiresHumanReview = getValue(extracted_json, 'requires_human_review', null);
-          
+
           if (requiresHumanReview !== null && requiresHumanReview !== 'N/A') {
             return (
               <div className="bg-white rounded-lg border border-gray-200 p-4">
@@ -574,11 +573,10 @@ const EmailActions: React.FC<EmailActionsProps> = ({ email, onFetchLyzrData }) =
                   </div>
                   <h3 className="text-sm font-medium text-gray-700">Review Status</h3>
                 </div>
-                <div className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${
-                  requiresHumanReview 
-                    ? 'bg-red-100 text-red-800' 
-                    : 'bg-green-100 text-green-800'
-                }`}>
+                <div className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${requiresHumanReview
+                  ? 'bg-red-100 text-red-800'
+                  : 'bg-green-100 text-green-800'
+                  }`}>
                   {requiresHumanReview ? 'Human Review Required' : 'No Human Review Needed'}
                 </div>
               </div>
@@ -589,13 +587,13 @@ const EmailActions: React.FC<EmailActionsProps> = ({ email, onFetchLyzrData }) =
 
         {/* Additional Fields - Dynamic rendering for any other fields */}
         {(() => {
-                     const additionalFields = Object.keys(extracted_json).filter(key => 
-             !['classification', 'confidence_score', 'routing_action', 'key_indicators', 
-               'salesforce_action_legacy', 'existing_case_number', 'priority_level', 
-               'auto_acknowledgment', 'requires_human_review', 'extracted_entities',
-               'email_analysis', 'salesforce_action', 'customer_response', 'internal_routing'].includes(key)
-           );
-          
+          const additionalFields = Object.keys(extracted_json).filter(key =>
+            !['classification', 'confidence_score', 'routing_action', 'key_indicators',
+              'salesforce_action_legacy', 'existing_case_number', 'priority_level',
+              'auto_acknowledgment', 'requires_human_review', 'extracted_entities',
+              'email_analysis', 'salesforce_action', 'customer_response', 'internal_routing'].includes(key)
+          );
+
           if (additionalFields.length > 0) {
             return (
               <div className="bg-white rounded-lg border border-gray-200 p-4">
@@ -609,9 +607,9 @@ const EmailActions: React.FC<EmailActionsProps> = ({ email, onFetchLyzrData }) =
                   {additionalFields.map((key) => {
                     const value = (extracted_json as any)[key];
                     if (!value || value === 'N/A') return null;
-                    
+
                     const displayKey = key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
-                    
+
                     if (Array.isArray(value)) {
                       return (
                         <div key={key} className="text-sm">
@@ -629,7 +627,7 @@ const EmailActions: React.FC<EmailActionsProps> = ({ email, onFetchLyzrData }) =
                         </div>
                       );
                     }
-                    
+
                     return (
                       <div key={key} className="text-sm">
                         <p className="font-medium text-gray-700">{displayKey}:</p>
@@ -679,10 +677,9 @@ const EmailActions: React.FC<EmailActionsProps> = ({ email, onFetchLyzrData }) =
                 <span className="text-gray-600">Message ID: {email.messageId.substring(0, 20)}...</span>
               </div>
             )}
-            
+
           </div>
         </div>
-
 
 
         {/* Lyzr AI Analysis */}
@@ -691,7 +688,7 @@ const EmailActions: React.FC<EmailActionsProps> = ({ email, onFetchLyzrData }) =
             <h3 className="text-sm font-medium text-gray-700">AI Analysis</h3>
             <div className="flex space-x-2">
               {!email.lyzrData && email.messageId && (
-                <button 
+                <button
                   onClick={async () => {
                     if (onFetchLyzrData) {
                       try {
@@ -716,10 +713,10 @@ const EmailActions: React.FC<EmailActionsProps> = ({ email, onFetchLyzrData }) =
                   Fetch Lyzr Data
                 </button>
               )}
-              
+
             </div>
           </div>
-          
+
           {/* Status Information */}
           <div className="mb-4 p-3 bg-gray-50 rounded-lg">
             <div className="text-xs text-gray-600 space-y-1">
@@ -732,7 +729,7 @@ const EmailActions: React.FC<EmailActionsProps> = ({ email, onFetchLyzrData }) =
               {lyzrError && <div className="text-red-600">Error: {lyzrError}</div>}
             </div>
           </div>
-          
+
           {/* Raw Email Data (Debug) */}
           <details className="mb-4">
             <summary className="text-xs text-gray-600 cursor-pointer hover:text-gray-800">Show Raw Email Data</summary>
@@ -742,7 +739,7 @@ const EmailActions: React.FC<EmailActionsProps> = ({ email, onFetchLyzrData }) =
               </pre>
             </div>
           </details>
-          
+
           {/* Lyzr Data Debug */}
           <details className="mb-4">
             <summary className="text-xs text-gray-600 cursor-pointer hover:text-gray-800">Show Lyzr Data Debug</summary>
@@ -765,7 +762,7 @@ const EmailActions: React.FC<EmailActionsProps> = ({ email, onFetchLyzrData }) =
               </div>
             </div>
           </details>
-          
+
           {renderLyzrData()}
         </div>
 
@@ -778,12 +775,12 @@ const EmailActions: React.FC<EmailActionsProps> = ({ email, onFetchLyzrData }) =
                 Review Needed
               </span>
             </div>
-            
+
             <div className="space-y-3">
               <p className="text-xs text-gray-600">
                 AI analysis indicates this email requires human review and validation
               </p>
-              
+
               {/* Quick Review Buttons */}
               <div className="grid grid-cols-2 gap-2">
                 <button
@@ -794,7 +791,7 @@ const EmailActions: React.FC<EmailActionsProps> = ({ email, onFetchLyzrData }) =
                   <ThumbsUp className="h-4 w-4 text-green-600" />
                   <span className="text-sm text-gray-700">Approve</span>
                 </button>
-                
+
                 <button
                   onClick={() => setIsFeedbackModalOpen(true)}
                   disabled={feedbackSubmitting}
@@ -803,7 +800,7 @@ const EmailActions: React.FC<EmailActionsProps> = ({ email, onFetchLyzrData }) =
                   <ThumbsDown className="h-4 w-4 text-red-600" />
                   <span className="text-sm text-gray-700">Reject</span>
                 </button>
-                
+
                 <button
                   onClick={() => setIsFeedbackModalOpen(true)}
                   disabled={feedbackSubmitting}
@@ -812,7 +809,7 @@ const EmailActions: React.FC<EmailActionsProps> = ({ email, onFetchLyzrData }) =
                   <HelpCircle className="h-4 w-4 text-blue-600" />
                   <span className="text-sm text-gray-700">Needs Work</span>
                 </button>
-                
+
                 <button
                   onClick={() => setIsFeedbackModalOpen(true)}
                   disabled={feedbackSubmitting}
@@ -822,7 +819,7 @@ const EmailActions: React.FC<EmailActionsProps> = ({ email, onFetchLyzrData }) =
                   <span className="text-sm text-gray-700">Rate & Review</span>
                 </button>
               </div>
-              
+
               <button
                 onClick={() => setIsFeedbackModalOpen(true)}
                 disabled={feedbackSubmitting}

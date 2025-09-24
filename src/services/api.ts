@@ -315,6 +315,29 @@ class ApiService {
       timestamp: apiEmail.received_date || apiEmail.extracted_at,
       attachments: apiEmail.attachments || [],
       is_read: apiEmail.is_read || false,
+      // Include lyzr_data if present (for AI analysis)
+      lyzrData: apiEmail.lyzr_data ? {
+        _id: apiEmail.lyzr_data._id,
+        email_id: apiEmail.lyzr_data.email_id,
+        session_id: apiEmail.lyzr_data.session_id,
+        raw_response: apiEmail.lyzr_data.raw_response,
+        extracted_json: apiEmail.lyzr_data.extracted_json,
+        processed_at: apiEmail.lyzr_data.processed_at,
+        success: apiEmail.lyzr_data.success,
+        error: apiEmail.lyzr_data.error
+      } : undefined,
+      // Include draft_data if present (for draft management)
+      draftData: apiEmail.draft_data ? {
+        _id: apiEmail.draft_data._id,
+        email_id: apiEmail.draft_data.email_id,
+        custom_draft_message: apiEmail.draft_data.custom_draft_message,
+        draft_edited: apiEmail.draft_data.draft_edited || false,
+        draft_edited_at: apiEmail.draft_data.draft_edited_at,
+        acknowledgment_email_sent: apiEmail.draft_data.acknowledgment_email_sent || false,
+        acknowledgment_email_sent_at: apiEmail.draft_data.acknowledgment_email_sent_at,
+        created_at: apiEmail.draft_data.created_at,
+        updated_at: apiEmail.draft_data.updated_at
+      } : undefined,
       // Action is optional in the type, so we can omit it
     };
 
@@ -566,6 +589,165 @@ class ApiService {
       return response;
     } catch (error) {
       console.error('Failed to delete feedback:', error);
+      throw error;
+    }
+  }
+
+  // ===== EMAIL ACKNOWLEDGMENT METHODS =====
+
+  // Send acknowledgment email for a specific email
+  async sendAcknowledgmentEmail(emailId: string): Promise<{
+    success: boolean;
+    message: string;
+    email_id: string;
+    sender_email?: string;
+    subject?: string;
+    sent_at?: string;
+    error?: string;
+    already_sent?: boolean;
+    blocked?: boolean;
+  }> {
+    try {
+      console.log('Sending acknowledgment email for email ID:', emailId);
+      const response = await this.request<{
+        success: boolean;
+        message: string;
+        email_id: string;
+        sender_email?: string;
+        subject?: string;
+        sent_at?: string;
+        error?: string;
+        already_sent?: boolean;
+        blocked?: boolean;
+      }>(`/api/v1/webhook/emails/${emailId}/send-acknowledgment-email`, {
+        method: 'POST'
+      });
+      console.log('Acknowledgment email response:', response);
+      return response;
+    } catch (error) {
+      console.error('Failed to send acknowledgment email:', error);
+      throw error;
+    }
+  }
+
+  // ===== DRAFT MANAGEMENT METHODS =====
+
+  // Get all emails with draft information
+  async getEmailDrafts(): Promise<EmailData[]> {
+    try {
+      console.log('Fetching email drafts from API...');
+      const response = await this.request<{ emails: any[]; count: number }>('/api/v1/webhook/emails/drafts');
+      console.log('Draft emails response:', response);
+
+      // Transform the API response to match our EmailData interface
+      const transformedEmails = response.emails.map(email => {
+        console.log('Transforming draft email:', email);
+        const transformed = this.transformApiEmail(email);
+        console.log('Transformed draft email:', transformed);
+        return transformed;
+      });
+
+      // Sort emails by timestamp in descending order (latest first)
+      const sortedEmails = transformedEmails.sort((a, b) => {
+        const dateA = a.timestamp ? new Date(a.timestamp).getTime() : 0;
+        const dateB = b.timestamp ? new Date(b.timestamp).getTime() : 0;
+        return dateB - dateA;
+      });
+
+      console.log('Final transformed draft emails:', sortedEmails);
+      return sortedEmails;
+    } catch (error) {
+      console.error('Failed to fetch draft emails:', error);
+      throw error;
+    }
+  }
+
+  // Get specific email draft content
+  async getEmailDraft(emailId: string): Promise<{
+    email_id: string;
+    custom_draft_message?: string;
+    draft_edited: boolean;
+    draft_edited_at?: string;
+    acknowledgment_email_sent: boolean;
+  }> {
+    try {
+      console.log('Fetching draft for email ID:', emailId);
+      const response = await this.request<{
+        email_id: string;
+        custom_draft_message?: string;
+        draft_edited: boolean;
+        draft_edited_at?: string;
+        acknowledgment_email_sent: boolean;
+      }>(`/api/v1/webhook/emails/${emailId}/draft`);
+      console.log('Draft response:', response);
+      return response;
+    } catch (error) {
+      console.error('Failed to fetch email draft:', error);
+      throw error;
+    }
+  }
+
+  // Save edited draft
+  async saveEmailDraft(emailId: string, customMessage: string): Promise<{
+    email_id: string;
+    custom_draft_message: string;
+    draft_edited: boolean;
+    draft_edited_at: string;
+    acknowledgment_email_sent: boolean;
+  }> {
+    try {
+      console.log('Saving draft for email ID:', emailId);
+      const response = await this.request<{
+        email_id: string;
+        custom_draft_message: string;
+        draft_edited: boolean;
+        draft_edited_at: string;
+        acknowledgment_email_sent: boolean;
+      }>(`/api/v1/webhook/emails/${emailId}/draft`, {
+        method: 'PUT',
+        body: JSON.stringify({ custom_message: customMessage })
+      });
+      console.log('Draft saved successfully:', response);
+      return response;
+    } catch (error) {
+      console.error('Failed to save email draft:', error);
+      throw error;
+    }
+  }
+
+  // Send custom draft email
+  async sendCustomDraft(emailId: string): Promise<{
+    success: boolean;
+    message: string;
+    email_id: string;
+    sender_email?: string;
+    subject?: string;
+    sent_at?: string;
+    error?: string;
+    already_sent?: boolean;
+    blocked?: boolean;
+    custom_draft_used?: boolean;
+  }> {
+    try {
+      console.log('Sending custom draft for email ID:', emailId);
+      const response = await this.request<{
+        success: boolean;
+        message: string;
+        email_id: string;
+        sender_email?: string;
+        subject?: string;
+        sent_at?: string;
+        error?: string;
+        already_sent?: boolean;
+        blocked?: boolean;
+        custom_draft_used?: boolean;
+      }>(`/api/v1/webhook/emails/${emailId}/send-custom-draft`, {
+        method: 'POST'
+      });
+      console.log('Custom draft send response:', response);
+      return response;
+    } catch (error) {
+      console.error('Failed to send custom draft:', error);
       throw error;
     }
   }
