@@ -111,7 +111,7 @@ const Header: React.FC<HeaderProps> = ({
             <span className={`text-sm font-medium ${backendStatus === 'connected' ? 'text-green-700' :
               backendStatus === 'disconnected' ? 'text-red-700' : 'text-yellow-700'
               }`}>
-              {backendStatus === 'connected' ? 'Webhook Connected' : getStatusText()}
+              {backendStatus === 'connected' ? 'Webhook' : getStatusText()}
             </span>
             <div className={`w-2 h-2 rounded-full ${getStatusColor()}`}></div>
           </div>

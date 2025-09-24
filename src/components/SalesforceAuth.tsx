@@ -184,7 +184,7 @@ const SalesforceAuth: React.FC<SalesforceAuthProps> = ({ className = '' }) => {
       <div className={`flex items-center space-x-3 px-3 py-2 rounded-lg bg-green-100 ${className}`}>
         {/* Green status circle */}
         <div className="flex items-center space-x-2">
-          <div className={`w-3 h-3 rounded-full animate-pulse ${salesforceStatus?.authenticated ? 'bg-green-500' : 'bg-yellow-500'}`}></div>
+          <div className={`w-2 h-2 rounded-full animate-pulse ${salesforceStatus?.authenticated ? 'bg-green-500' : 'bg-yellow-500'}`}></div>
           <User className="h-4 w-4 text-green-600" />
           <span className="text-sm font-medium text-green-700">Salesforce</span>
         </div>
@@ -201,7 +201,6 @@ const SalesforceAuth: React.FC<SalesforceAuthProps> = ({ className = '' }) => {
           className="flex items-center space-x-1 text-xs text-green-700 hover:text-green-900 hover:bg-green-200 px-2 py-1 rounded transition-colors"
         >
           <RefreshCw className="h-3 w-3" />
-          <span>Reconnect</span>
         </button>
 
         <button
@@ -209,7 +208,6 @@ const SalesforceAuth: React.FC<SalesforceAuthProps> = ({ className = '' }) => {
           className="flex items-center space-x-1 text-xs text-green-700 hover:text-green-900 hover:bg-green-200 px-2 py-1 rounded transition-colors"
         >
           <LogOut className="h-3 w-3" />
-          <span>Logout</span>
         </button>
       </div>
     );

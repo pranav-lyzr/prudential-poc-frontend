@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { EmailData } from '../types/email';
-import { Edit3, Send, CheckCircle, XCircle, RefreshCw, Mail, User, Clock, AlertTriangle } from 'lucide-react';
+import { Edit3, Send, CheckCircle, XCircle, RefreshCw, Mail, User, Clock, AlertTriangle, MessageSquare } from 'lucide-react';
 import { apiService } from '../services/api';
+import { FeedbackData, CreateFeedbackRequest } from '../types/feedback';
+import FeedbackModal from './FeedbackModal';
 // @ts-ignore
 import DraftEmailEditor from './DraftEmailEditor';
 
@@ -21,6 +23,8 @@ const DraftEmailPreview: React.FC<DraftEmailPreviewProps> = ({
   const [sendingEmail, setSendingEmail] = useState(false);
   const [sendSuccess, setSendSuccess] = useState<string | null>(null);
   const [sendError, setSendError] = useState<string | null>(null);
+  const [isFeedbackModalOpen, setIsFeedbackModalOpen] = useState(false);
+  const [feedbackData, setFeedbackData] = useState<FeedbackData[]>([]);
 
   const email = emails.find(e => e.id === emailId);
 
@@ -30,6 +34,26 @@ const DraftEmailPreview: React.FC<DraftEmailPreviewProps> = ({
     setSendError(null);
     setCustomDraft('');
     setIsEditing(false);
+  }, [emailId]);
+
+  // Fetch feedback data when email changes
+  useEffect(() => {
+    const fetchFeedbackData = async () => {
+      if (!emailId) {
+        setFeedbackData([]);
+        return;
+      }
+
+      try {
+        const feedback = await apiService.getFeedbackByEmail(emailId);
+        setFeedbackData(feedback);
+      } catch (error) {
+        console.error('Failed to fetch feedback data:', error);
+        setFeedbackData([]);
+      }
+    };
+
+    fetchFeedbackData();
   }, [emailId]);
 
   // Generate email content from Lyzr data
@@ -188,6 +212,20 @@ const DraftEmailPreview: React.FC<DraftEmailPreviewProps> = ({
     return email?.draftData?.acknowledgment_email_sent === true;
   };
 
+  const handleFeedbackSubmit = async (feedbackData: CreateFeedbackRequest) => {
+    try {
+      await apiService.createFeedback(feedbackData);
+      // Refresh feedback data after submission
+      if (emailId) {
+        const updatedFeedback = await apiService.getFeedbackByEmail(emailId);
+        setFeedbackData(updatedFeedback);
+      }
+    } catch (error) {
+      console.error('Failed to submit feedback:', error);
+      throw error;
+    }
+  };
+
   const getDraftContent = () => {
     // Use custom draft from database if available (highest priority)
     if (email?.draftData?.custom_draft_message) {
@@ -270,6 +308,15 @@ const DraftEmailPreview: React.FC<DraftEmailPreviewProps> = ({
               </div>
             ) : (
               <>
+                <button
+                  onClick={() => setIsFeedbackModalOpen(true)}
+                  disabled={sendingEmail}
+                  className="flex items-center space-x-2 px-4 py-2 bg-white border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 hover:border-gray-400 disabled:opacity-50 shadow-sm transition-all duration-200"
+                >
+                  <MessageSquare className="h-4 w-4" />
+                  <span>Feedback</span>
+                </button>
+
                 <button
                   onClick={() => setIsEditing(true)}
                   disabled={sendingEmail}
@@ -356,6 +403,32 @@ const DraftEmailPreview: React.FC<DraftEmailPreviewProps> = ({
             />
           </div>
 
+          {/* Feedback Summary */}
+          {feedbackData.length > 0 && (
+            <div className="mt-4 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+              <div className="flex items-start space-x-3">
+                <MessageSquare className="h-5 w-5 text-yellow-600 flex-shrink-0 mt-0.5" />
+                <div className="flex-1">
+                  <h4 className="text-sm font-semibold text-yellow-900 mb-2">Human Review Summary</h4>
+                  <div className="space-y-2">
+                    {feedbackData.slice(0, 3).map((feedback) => (
+                      <div key={feedback.id} className="text-xs text-yellow-800">
+                        <span className="font-medium capitalize">{feedback.feedback_type.replace('_', ' ')}</span>
+                        {feedback.rating && <span className="ml-1">({feedback.rating}/5)</span>}
+                        {feedback.comment && <span className="ml-2 italic">"{feedback.comment.slice(0, 100)}{feedback.comment.length > 100 ? '...' : ''}"</span>}
+                      </div>
+                    ))}
+                    {feedbackData.length > 3 && (
+                      <div className="text-xs text-yellow-700 font-medium">
+                        +{feedbackData.length - 3} more review{feedbackData.length - 3 !== 1 ? 's' : ''}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Draft Info */}
           <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
             <div className="flex items-start space-x-2">
@@ -376,6 +449,15 @@ const DraftEmailPreview: React.FC<DraftEmailPreviewProps> = ({
           </div>
         </div>
       </div>
+
+      {/* Feedback Modal */}
+      <FeedbackModal
+        isOpen={isFeedbackModalOpen}
+        onClose={() => setIsFeedbackModalOpen(false)}
+        onSubmit={handleFeedbackSubmit}
+        emailId={emailId || ''}
+        emailSubject={email?.subject || ''}
+      />
     </div>
   );
 };
