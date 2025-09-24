@@ -164,8 +164,6 @@ const DraftEmailEditor: React.FC<DraftEmailEditorProps> = ({
     return `
       <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; line-height: 1.6; color: #333; max-width: 100%;">
         ${htmlParagraphs.join('\n        ')}
-        <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 24px 0;">
-        <p style="font-size: 12px; color: #6b7280; margin: 0; font-style: italic;">This is an automated acknowledgment. Please do not reply to this email.</p>
       </div>
     `.trim();
   };
@@ -187,7 +185,7 @@ const DraftEmailEditor: React.FC<DraftEmailEditorProps> = ({
               </div>
               <div className="flex items-center space-x-2 w-full">
                 <span className="text-gray-500 flex-shrink-0">Subject:</span>
-                <span className="text-gray-700 font-medium flex-1 break-words">Re: {email.subject}</span>
+                <span className="text-gray-700 font-medium flex-1 truncate">Re: {email.subject}</span>
               </div>
             </div>
           </div>

@@ -65,8 +65,6 @@ const DraftEmailPreview: React.FC<DraftEmailPreviewProps> = ({
           <p>Our team will review your request and get back to you shortly.</p>
           <br>
           <p>Best regards,<br>Support Team</p>
-          <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;">
-          <p style="font-size: 12px; color: #666;">This is an automated acknowledgment. Please do not reply to this email.</p>
         </div>
       `.trim();
     }
@@ -87,8 +85,7 @@ const DraftEmailPreview: React.FC<DraftEmailPreviewProps> = ({
           ` : ''}
           <br>
           <p>Best regards,<br>Support Team</p>
-          <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;">
-          <p style="font-size: 12px; color: #666;">This is an automated acknowledgment. Please do not reply to this email.</p>
+          <br>
         </div>
       `.trim();
     }
@@ -100,8 +97,7 @@ const DraftEmailPreview: React.FC<DraftEmailPreviewProps> = ({
         <p>Our team will review your request and get back to you shortly.</p>
         <br>
         <p>Best regards,<br>Support Team</p>
-        <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;">
-        <p style="font-size: 12px; color: #666;">This is an automated acknowledgment. Please do not reply to this email.</p>
+        <br>
       </div>
     `.trim();
   };
